@@ -1,4 +1,4 @@
-# DUT Equip — Hệ thống Quản lý Thiết bị Công
+# DUT Equip — Hệ thống Quản lý Thiết bị công trường Đại học Bách Khoa Đà Nẵng
 **Đại học Bách Khoa Đà Nẵng**
 
 Hệ thống cho phép giảng viên mượn/trả thiết bị công của trường; admin quản lý danh mục thiết bị, duyệt đơn mượn, theo dõi bảo trì và phân tích rủi ro hỏng hóc bằng AI.
@@ -17,7 +17,7 @@ Hệ thống cho phép giảng viên mượn/trả thiết bị công của trư
                              ▼                      │
                      ┌────────────────┐             │
                      │  MySQL 8       │◄────────────┘
-                     │  qltbc_draft   │
+                     │  dut_equip   │
                      └────────────────┘
 ```
 
@@ -179,7 +179,6 @@ Mở **3 cửa sổ terminal** chạy song song:
 
 ```
 DATN/
-├── CLAUDE.md                 Hướng dẫn quy tắc làm việc cho Claude Code
 ├── README.md                 File này
 ├── backend/                  Spring Boot API
 │   ├── pom.xml
