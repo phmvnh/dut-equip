@@ -65,14 +65,14 @@ mysql --version
    -- Mở file: dut-equip-AI/migrations/001_ai_predictions.sql và chạy nội dung
    ```
 
-> Mặc định backend dùng `username=root`, `password=phmvnh`. Đổi qua biến môi trường `DB_USERNAME`, `DB_PASSWORD` nếu khác.
+> Mặc định backend dùng `username=root`. Cấu hình `password` của bạn qua biến môi trường `DB_USERNAME`, `DB_PASSWORD`.
 
 ---
 
 ## 4. Chạy Backend (Spring Boot)
 
 ```powershell
-cd "c:\Users\phamv\OneDrive\Máy tính\DATN\backend"
+cd backend
 .\mvnw spring-boot:run
 ```
 
@@ -86,7 +86,7 @@ $env:DB_HOST="localhost"
 $env:DB_PORT="3306"
 $env:DB_NAME="qltbc_draft"
 $env:DB_USERNAME="root"
-$env:DB_PASSWORD="phmvnh"
+$env:DB_PASSWORD="<mật-khẩu-mysql-của-bạn>"
 $env:JWT_SECRET="<chuỗi-bí-mật-tối-thiểu-256-bit>"
 $env:AI_SERVICE_URL="http://localhost:8000"
 ```
@@ -99,7 +99,7 @@ Khóa Cloudinary (`CLOUDINARY_*`) đã có giá trị mặc định trong [appli
 
 Lần đầu cài dependencies:
 ```powershell
-cd "c:\Users\phamv\OneDrive\Máy tính\DATN\frontend"
+cd frontend
 npm install
 ```
 
@@ -121,7 +121,7 @@ Tài khoản Admin mặc định (sau khi backend seed lần đầu):
 
 Lần đầu setup:
 ```powershell
-cd "c:\Users\phamv\OneDrive\Máy tính\DATN\dut-equip-AI"
+cd dut-equip-AI
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -135,7 +135,7 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=qltbc_draft
 DB_USER=root
-DB_PASSWORD=phmvnh
+DB_PASSWORD=<mật-khẩu-mysql-của-bạn>
 ```
 
 Chạy:
@@ -156,18 +156,18 @@ Mở **3 cửa sổ terminal** chạy song song:
 
 1. **Terminal 1 — Backend**
    ```powershell
-   cd "c:\Users\phamv\OneDrive\Máy tính\DATN\backend"
+   cd backend
    .\mvnw spring-boot:run
    ```
 2. **Terminal 2 — AI Service**
    ```powershell
-   cd "c:\Users\phamv\OneDrive\Máy tính\DATN\dut-equip-AI"
+   cd dut-equip-AI
    .\.venv\Scripts\Activate.ps1
    uvicorn app.main:app --reload --port 8000
    ```
 3. **Terminal 3 — Frontend**
    ```powershell
-   cd "c:\Users\phamv\OneDrive\Máy tính\DATN\frontend"
+   cd frontend
    npm run dev
    ```
 
