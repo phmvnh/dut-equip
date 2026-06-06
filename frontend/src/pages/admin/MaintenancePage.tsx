@@ -620,7 +620,8 @@ function CompleteMaintenanceModal({
     },
   });
 
-  function handleSubmit() {
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     let cost: number | undefined;
     if (costStr.trim()) {
       const n = Number(costStr);
@@ -643,6 +644,7 @@ function CompleteMaintenanceModal({
           Xác nhận hoàn thành bảo trì <span className="font-medium text-gray-900">"{maintenance.equipmentName}"</span>. Thiết bị sẽ chuyển về trạng thái <span className="font-medium">Sẵn sàng</span>.
         </p>
 
+        <form onSubmit={handleSubmit}>
         <div className="space-y-3 mb-4">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Chi phí <span className="text-gray-400 font-normal">(VNĐ, tùy chọn)</span></label>
@@ -681,12 +683,13 @@ function CompleteMaintenanceModal({
         {err && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg mb-3" style={{ border: '1px solid #fecaca' }}>{err}</p>}
 
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} disabled={mut.isPending} className="h-9 px-4 rounded-lg bg-gray-100 text-gray-800 border border-gray-300 text-sm hover:bg-gray-200 disabled:opacity-60">Hủy</button>
-          <button onClick={handleSubmit} disabled={mut.isPending} autoFocus className="h-9 px-4 rounded-lg bg-green-100 text-green-800 border border-green-300 text-sm font-semibold hover:bg-green-200 disabled:opacity-60 inline-flex items-center gap-2">
+          <button type="button" onClick={onClose} disabled={mut.isPending} className="h-9 px-4 rounded-lg bg-gray-100 text-gray-800 border border-gray-300 text-sm hover:bg-gray-200 disabled:opacity-60">Hủy</button>
+          <button type="submit" disabled={mut.isPending} autoFocus className="h-9 px-4 rounded-lg bg-green-100 text-green-800 border border-green-300 text-sm font-semibold hover:bg-green-200 disabled:opacity-60 inline-flex items-center gap-2">
             {mut.isPending && <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />}
             Xác nhận hoàn thành
           </button>
         </div>
+        </form>
       </div>
     </div>
   );

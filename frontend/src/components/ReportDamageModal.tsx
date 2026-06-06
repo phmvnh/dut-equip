@@ -15,7 +15,6 @@ const SEVERITY_OPTIONS: { value: DamageSeverity; label: string; description: str
 ];
 
 const MAX_IMAGES = 3;
-const MIN_DESCRIPTION = 10;
 
 function getErrorMessage(err: unknown): string | undefined {
   return (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -91,8 +90,8 @@ export default function ReportDamageModal({ borrow, onClose }: Props) {
   const handleSubmit = () => {
     setError('');
     const trimmed = description.trim();
-    if (trimmed.length < MIN_DESCRIPTION) {
-      setError(`Mô tả lỗi phải ít nhất ${MIN_DESCRIPTION} ký tự`);
+    if (!trimmed) {
+      setError('Vui lòng mô tả tình trạng thiết bị');
       return;
     }
     reportMut.mutate();
@@ -172,11 +171,8 @@ export default function ReportDamageModal({ borrow, onClose }: Props) {
               placeholder="Triệu chứng cụ thể, thời điểm phát hiện, các thử nghiệm đã làm..."
               className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
             />
-            <div className="flex justify-between mt-1">
-              <span className="text-[11px] text-gray-400">Tối thiểu {MIN_DESCRIPTION} ký tự</span>
-              <span className={`text-[11px] ${descLength < MIN_DESCRIPTION ? 'text-gray-400' : 'text-gray-500'}`}>
-                {descLength} ký tự
-              </span>
+            <div className="flex justify-end mt-1">
+              <span className="text-[11px] text-gray-500">{descLength} ký tự</span>
             </div>
           </div>
 
@@ -259,7 +255,7 @@ export default function ReportDamageModal({ borrow, onClose }: Props) {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={busy || descLength < MIN_DESCRIPTION}
+            disabled={busy || descLength === 0}
             className="h-9 px-4 rounded-lg bg-red-100 text-red-700 border border-red-300 text-sm font-semibold hover:bg-red-200 disabled:opacity-60 inline-flex items-center gap-2"
           >
             {reportMut.isPending && (
