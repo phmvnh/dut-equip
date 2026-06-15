@@ -24,6 +24,14 @@ const STATUS_PILL: Record<CompensationStatus, { label: string; bg: string; color
   CANCELLED: { label: 'Đã hủy',         bg: '#f1f5f9', color: '#475569' },
 };
 
+const PROOF_PILL = { label: 'Đã nộp minh chứng', bg: '#dbeafe', color: '#1d4ed8' };
+
+// PENDING + đã có minh chứng → hiển thị "Đã nộp minh chứng" để admin biết cần kiểm tra
+function statusPill(c: Compensation) {
+  if (c.status === 'PENDING' && c.paymentProofUrl) return PROOF_PILL;
+  return STATUS_PILL[c.status];
+}
+
 const borderStyle = { border: '1px solid #e5e7eb' };
 
 function fmtDateTime(iso?: string) {
@@ -174,7 +182,7 @@ export default function CompensationsPage() {
                 <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">Không có phiếu nào</td></tr>
               )}
               {filtered.map((c) => {
-                const pill = STATUS_PILL[c.status];
+                const pill = statusPill(c);
                 const complaintPending = c.hasComplaint && c.complaintStatus === 'PENDING_REVIEW';
                 return (
                   <tr

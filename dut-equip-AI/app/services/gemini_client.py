@@ -16,7 +16,10 @@ log = logging.getLogger(__name__)
 _configured = False
 _exhausted_models: set[str] = set()
 
-_GEN_CONFIG = {"response_mime_type": "application/json", "temperature": 0.3}
+# temperature=0 cho quyết định bảo trì ỔN ĐỊNH: cùng input → cùng mức rủi ro,
+# tránh dao động HIGH/MEDIUM thất thường rồi bị fingerprint "đóng băng" mức sai.
+GEN_TEMPERATURE = 0.0
+_GEN_CONFIG = {"response_mime_type": "application/json", "temperature": GEN_TEMPERATURE}
 
 
 def _ensure_configured():
@@ -41,9 +44,10 @@ def _parse(text: str) -> list[dict]:
     return data
 
 
-def analyze_batch(prompt: str) -> list[dict]:
-    """Gửi prompt, trả về list dict đã parse. Tự chuyển model dự phòng khi 429.
+def analyze_batch(prompt: str) -> tuple[list[dict], str]:
+    """Gửi prompt, trả về (list dict đã parse, tên model đã dùng). Tự chuyển model dự phòng khi 429.
 
+    Trả thêm `model_used` để analyzer ghi provenance (model nào tạo ra dự đoán).
     Raise nếu tất cả model đều hết quota, hoặc lỗi nặng khác (parse JSON / API).
     """
     _ensure_configured()
@@ -67,7 +71,7 @@ def analyze_batch(prompt: str) -> list[dict]:
             raise
 
         try:
-            return _parse(text)
+            return _parse(text), name
         except json.JSONDecodeError as e:
             log.error("Parse JSON Gemini (%s) lỗi: %s\n--- raw ---\n%s\n----------", name, e, text[:500])
             raise

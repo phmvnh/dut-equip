@@ -17,6 +17,7 @@ import com.datn.backend.dto.AuthResponse;
 import com.datn.backend.dto.ChangePasswordRequest;
 import com.datn.backend.dto.LoginRequest;
 import com.datn.backend.dto.RegisterRequest;
+import com.datn.backend.dto.UpdatePersonalEmailRequest;
 import com.datn.backend.dto.UpdateProfileRequest;
 import com.datn.backend.service.AuthService;
 
@@ -57,6 +58,12 @@ public class AuthController {
     public ResponseEntity<AuthResponse.UserInfo> updateAvatar(Principal principal,
                                                               @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(authService.updateAvatar(principal.getName(), file));
+    }
+
+    @PutMapping("/me/personal-email")
+    public ResponseEntity<AuthResponse.UserInfo> updatePersonalEmail(Principal principal,
+                                                                     @RequestBody @Valid UpdatePersonalEmailRequest request) {
+        return ResponseEntity.ok(authService.updatePersonalEmail(principal.getName(), request));
     }
 
     @PostMapping("/change-password")

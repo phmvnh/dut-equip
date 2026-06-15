@@ -113,6 +113,12 @@ const ICONS = {
       <path d="M12 7v5l3 2" />
     </svg>
   ),
+  report: (
+    <svg className={ICON_CLASS} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="8" y2="17" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="16" y1="15" x2="16" y2="17" />
+    </svg>
+  ),
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -126,6 +132,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/admin/buildings', label: 'Khu/Tòa nhà', icon: ICONS.building },
   { path: '/admin/chat', label: 'Tin nhắn', icon: ICONS.chat },
   { path: '/admin/activity-logs', label: 'Lịch sử hoạt động', icon: ICONS.history },
+  { path: '/admin/reports', label: 'Báo cáo', icon: ICONS.report },
   { path: '/admin/profile', label: 'Thông tin cá nhân', icon: ICONS.profile },
   { path: '/admin/settings', label: 'Cài đặt', icon: ICONS.settings },
 ];
@@ -167,6 +174,8 @@ function getTopbarMeta(pathname: string, navigate: (p: string) => void): TopbarM
     return { title: 'Hỗ trợ chat' };
   if (pathname.startsWith('/admin/activity-logs'))
     return { title: 'Lịch sử hoạt động' };
+  if (pathname.startsWith('/admin/reports'))
+    return { title: 'Báo cáo thống kê' };
   void navigate;
   return { title: 'Quản trị' };
 }

@@ -62,6 +62,13 @@ export interface BorrowResponse {
   damageReportedAt?: string;
 }
 
+// Khung giờ đã đặt của 1 thiết bị — không kèm thông tin người mượn (privacy)
+export interface EquipmentScheduleSlot {
+  borrowDateTime: string;
+  returnDateTime: string;
+  status: 'PENDING' | 'APPROVED' | 'OVERDUE';
+}
+
 export type BorrowStatus = 'PENDING' | 'APPROVED' | 'RETURNED' | 'OVERDUE' | 'REJECTED' | 'CANCELLED';
 
 export type EquipmentReturnStatus = 'AVAILABLE' | 'MAINTENANCE' | 'BROKEN';
@@ -101,6 +108,12 @@ export const borrowApi = {
     axiosClient
       .get<BorrowResponse | ''>(`/borrows/active-by-equipment/${equipmentId}`)
       .then((r) => (r.status === 204 || !r.data ? null : (r.data as BorrowResponse))),
+
+  // Mọi user đăng nhập — các khung giờ đã đặt (PENDING/APPROVED/OVERDUE) của thiết bị
+  getScheduleByEquipment: (equipmentId: number): Promise<EquipmentScheduleSlot[]> =>
+    axiosClient
+      .get<EquipmentScheduleSlot[]>(`/borrows/schedule-by-equipment/${equipmentId}`)
+      .then((r) => r.data),
 
   reportDamage: (id: number, payload: ReportDamageRequest) =>
     axiosClient.post<BorrowResponse>(`/borrows/${id}/report-damage`, payload).then((r) => r.data),

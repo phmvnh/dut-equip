@@ -20,6 +20,7 @@ import com.datn.backend.dto.CompensationCreateRequest;
 import com.datn.backend.dto.CompensationResponse;
 import com.datn.backend.dto.ComplaintRequest;
 import com.datn.backend.dto.ComplaintResolveRequest;
+import com.datn.backend.dto.PaymentProofRequest;
 import com.datn.backend.entity.User;
 import com.datn.backend.exception.ResourceNotFoundException;
 import com.datn.backend.repository.UserRepository;
@@ -85,6 +86,15 @@ public class CompensationController {
     public ResponseEntity<ApiResponse<CompensationResponse>> cancel(@PathVariable Long id) {
         CompensationResponse updated = compensationService.cancel(id);
         return ResponseEntity.ok(ApiResponse.ok("Đã hủy phiếu bồi thường", updated));
+    }
+
+    // POST /api/v1/compensations/{id}/payment-proof — USER (chủ phiếu) nộp minh chứng đã bồi thường
+    @PostMapping("/{id}/payment-proof")
+    public ResponseEntity<ApiResponse<CompensationResponse>> submitPaymentProof(
+            @PathVariable Long id,
+            @RequestBody @Valid PaymentProofRequest request) {
+        CompensationResponse updated = compensationService.submitPaymentProof(id, request, currentUserId());
+        return ResponseEntity.ok(ApiResponse.ok("Đã nộp minh chứng, chờ quản trị viên xác nhận", updated));
     }
 
     // POST /api/v1/compensations/{id}/complaint — USER (chủ phiếu) khiếu nại

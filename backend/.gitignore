@@ -34,3 +34,6 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Secret — cấu hình local chứa khóa thật, không commit ###
+application-local.properties

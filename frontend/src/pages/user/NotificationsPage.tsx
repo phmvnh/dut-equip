@@ -1,7 +1,7 @@
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import Toast from '../components/Toast';
-import NotificationListView from '../components/notifications/NotificationListView';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import Toast from '../../components/Toast';
+import NotificationListView from '../../components/notifications/NotificationListView';
 
 export default function NotificationsPage() {
   return (

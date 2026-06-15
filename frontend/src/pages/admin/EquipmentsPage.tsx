@@ -64,6 +64,8 @@ export default function EquipmentsPage() {
   const [formError, setFormError] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [mainDragOver, setMainDragOver] = useState(false);
+  const [extraDragOver, setExtraDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Ảnh phụ: tách "đã tồn tại trên server" (có id, xóa qua API ngay)
@@ -219,11 +221,26 @@ export default function EquipmentsPage() {
     setExtraNewPreviews([]);
   }
 
+  function acceptMainFile(file: File) {
+    if (!file.type.startsWith('image/')) {
+      toast('Chỉ chấp nhận tệp ảnh', 'error');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    acceptMainFile(file);
+  }
+
+  function handleMainDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setMainDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) acceptMainFile(file);
   }
 
   function removeImage() {
@@ -232,23 +249,35 @@ export default function EquipmentsPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  function handleAddExtraFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
+  function acceptExtraFiles(files: File[]) {
+    const images = files.filter((f) => f.type.startsWith('image/'));
+    if (images.length < files.length) {
+      toast('Một số tệp không phải ảnh đã bị bỏ qua', 'error');
+    }
+    if (images.length === 0) return;
     const total = extraExistingImages.length + extraNewFiles.length;
     const remaining = MAX_EXTRA_IMAGES - total;
     if (remaining <= 0) {
       toast(`Chỉ cho phép tối đa ${MAX_EXTRA_IMAGES} ảnh phụ`, 'error');
-      if (extraInputRef.current) extraInputRef.current.value = '';
       return;
     }
-    const accepted = files.slice(0, remaining);
-    if (accepted.length < files.length) {
-      toast(`Chỉ thêm được ${accepted.length}/${files.length} ảnh (giới hạn ${MAX_EXTRA_IMAGES})`, 'error');
+    const accepted = images.slice(0, remaining);
+    if (accepted.length < images.length) {
+      toast(`Chỉ thêm được ${accepted.length}/${images.length} ảnh (giới hạn ${MAX_EXTRA_IMAGES})`, 'error');
     }
     setExtraNewFiles((p) => [...p, ...accepted]);
     setExtraNewPreviews((p) => [...p, ...accepted.map((f) => URL.createObjectURL(f))]);
+  }
+
+  function handleAddExtraFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    acceptExtraFiles(Array.from(e.target.files ?? []));
     if (extraInputRef.current) extraInputRef.current.value = '';
+  }
+
+  function handleExtraDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setExtraDragOver(false);
+    acceptExtraFiles(Array.from(e.dataTransfer.files ?? []));
   }
 
   function removeNewExtra(idx: number) {
@@ -373,7 +402,7 @@ export default function EquipmentsPage() {
               <th className="px-5 py-2.5 font-medium">Loại</th>
               <th className="px-5 py-2.5 font-medium">Vị trí TB</th>
               <th className="px-5 py-2.5 font-medium whitespace-nowrap">Trạng thái</th>
-              <th className="px-5 py-2.5 font-medium text-center whitespace-nowrap">Lượt sử dụng</th>
+              <th className="px-5 py-2.5 font-medium text-center whitespace-nowrap">Lượt dùng</th>
               <th className="px-5 py-2.5 font-medium text-right whitespace-nowrap">Thao tác</th>
             </tr>
           </thead>
@@ -586,11 +615,14 @@ export default function EquipmentsPage() {
                   <div className="flex items-start gap-3">
                     <div
                       onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); setMainDragOver(true); }}
+                      onDragLeave={() => setMainDragOver(false)}
+                      onDrop={handleMainDrop}
                       className="relative rounded-lg overflow-hidden cursor-pointer transition-colors flex items-center justify-center hover:bg-gray-100"
                       style={{
                         width: 120, height: 120,
-                        border: imagePreview ? '1px solid #e5e7eb' : '2px dashed #d1d5db',
-                        backgroundColor: '#f9fafb',
+                        border: mainDragOver ? '2px dashed #2563eb' : imagePreview ? '1px solid #e5e7eb' : '2px dashed #d1d5db',
+                        backgroundColor: mainDragOver ? '#eff6ff' : '#f9fafb',
                       }}
                     >
                       {imagePreview ? (
@@ -618,7 +650,7 @@ export default function EquipmentsPage() {
                     </div>
                     <p className="text-xs text-gray-500 leading-relaxed pt-1">
                       Ảnh hiển thị trong danh sách thiết bị.<br />
-                      JPG, PNG, WEBP — tối đa 5 MB.
+                      Kéo thả hoặc bấm để chọn. JPG, PNG, WEBP — tối đa 5 MB.
                     </p>
                   </div>
                   <input
@@ -641,7 +673,13 @@ export default function EquipmentsPage() {
                       <span className="text-gray-400 font-normal ml-2">— đang tải...</span>
                     )}
                   </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setExtraDragOver(true); }}
+                    onDragLeave={() => setExtraDragOver(false)}
+                    onDrop={handleExtraDrop}
+                    className="flex flex-wrap gap-2 rounded-lg transition-colors"
+                    style={{ outline: extraDragOver ? '2px dashed #2563eb' : 'none', outlineOffset: 4 }}
+                  >
                     {extraExistingImages.map((img) => (
                       <div
                         key={`e-${img.id}`}
@@ -684,8 +722,8 @@ export default function EquipmentsPage() {
                         className="cursor-pointer flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors rounded-lg select-none"
                         style={{
                           width: 96, height: 96,
-                          border: '2px dashed #d1d5db',
-                          backgroundColor: '#f9fafb',
+                          border: extraDragOver ? '2px dashed #2563eb' : '2px dashed #d1d5db',
+                          backgroundColor: extraDragOver ? '#eff6ff' : '#f9fafb',
                         }}
                       >
                         <span className="text-xl leading-none">+</span>

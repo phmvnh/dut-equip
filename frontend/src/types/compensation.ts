@@ -24,6 +24,8 @@ export interface Compensation {
   damageDescription?: string;
   status: CompensationStatus;
   paidAt?: string;
+  paymentProofUrl?: string;
+  paymentProofSubmittedAt?: string;
   createdAt: string;
   updatedAt: string;
 

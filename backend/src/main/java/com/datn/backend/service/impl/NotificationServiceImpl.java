@@ -12,10 +12,12 @@ import com.datn.backend.dto.NotificationResponse;
 import com.datn.backend.entity.Notification;
 import com.datn.backend.entity.User;
 import com.datn.backend.enums.NotificationType;
+import com.datn.backend.enums.UserRole;
 import com.datn.backend.exception.BadRequestException;
 import com.datn.backend.exception.ResourceNotFoundException;
 import com.datn.backend.repository.NotificationRepository;
 import com.datn.backend.repository.UserRepository;
+import com.datn.backend.service.EmailService;
 import com.datn.backend.service.NotificationService;
 
 @Service
@@ -28,13 +30,16 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepo;
     private final UserRepository userRepo;
     private final SimpMessagingTemplate messagingTemplate;
+    private final EmailService emailService;
 
     public NotificationServiceImpl(NotificationRepository notificationRepo,
                                    UserRepository userRepo,
-                                   SimpMessagingTemplate messagingTemplate) {
+                                   SimpMessagingTemplate messagingTemplate,
+                                   EmailService emailService) {
         this.notificationRepo  = notificationRepo;
         this.userRepo          = userRepo;
         this.messagingTemplate = messagingTemplate;
+        this.emailService      = emailService;
     }
 
     @Override
@@ -57,6 +62,12 @@ public class NotificationServiceImpl implements NotificationService {
                 NotificationResponse.from(saved)
         );
         log.debug("Đã gửi notification {} đến user {}", type, userId);
+
+        // Gửi thêm qua email cá nhân cho giảng viên (không gửi cho admin). Bất đồng bộ, lỗi không phá luồng.
+        if (user.getRole() != UserRole.ADMIN
+                && user.getPersonalEmail() != null && !user.getPersonalEmail().isBlank()) {
+            emailService.sendNotification(user.getPersonalEmail(), title, message);
+        }
     }
 
     @Override

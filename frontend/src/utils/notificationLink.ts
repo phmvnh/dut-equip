@@ -6,6 +6,7 @@ export function getNotificationLink(type: NotificationType): string | null {
   switch (type) {
     // ===== Admin notifications =====
     case 'NEW_BORROW_REQUEST':
+    case 'BORROW_APPROVAL_REMINDER':
       return '/admin/borrow?tab=PENDING';
     case 'EQUIPMENT_BROKEN':
       // User chỉ báo hỏng được khi đơn APPROVED hoặc OVERDUE — mặc định mở tab Đã duyệt
@@ -23,6 +24,7 @@ export function getNotificationLink(type: NotificationType): string | null {
 
     // ===== Compensation =====
     case 'COMPENSATION_COMPLAINT_RECEIVED':
+    case 'COMPENSATION_PROOF_SUBMITTED':
       return '/admin/compensations';
     case 'COMPENSATION_REQUIRED':
     case 'COMPENSATION_CONFIRMED':

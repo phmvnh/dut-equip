@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { authApi } from '../api/authApi';
+import { useAuthStore } from '../../store/authStore';
+import { authApi } from '../../api/authApi';
 
 type Tab = 'login' | 'register';
 

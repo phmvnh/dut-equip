@@ -97,6 +97,16 @@ public class CompensationClaim {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    // === Minh chứng đã bồi thường (giảng viên nộp ảnh hóa đơn/biên lai đã nộp Phòng Kế toán) ===
+
+    // URL ảnh hóa đơn đã nộp tiền — null = chưa nộp minh chứng
+    @Column(name = "payment_proof_url", length = 500)
+    private String paymentProofUrl;
+
+    // Thời điểm giảng viên nộp minh chứng
+    @Column(name = "payment_proof_submitted_at")
+    private LocalDateTime paymentProofSubmittedAt;
+
     // === Khiếu nại (nested 1-1 — mỗi phiếu tối đa 1 khiếu nại) ===
 
     @Column(name = "has_complaint", nullable = false)
@@ -191,6 +201,12 @@ public class CompensationClaim {
 
     public LocalDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+
+    public String getPaymentProofUrl() { return paymentProofUrl; }
+    public void setPaymentProofUrl(String paymentProofUrl) { this.paymentProofUrl = paymentProofUrl; }
+
+    public LocalDateTime getPaymentProofSubmittedAt() { return paymentProofSubmittedAt; }
+    public void setPaymentProofSubmittedAt(LocalDateTime paymentProofSubmittedAt) { this.paymentProofSubmittedAt = paymentProofSubmittedAt; }
 
     public boolean isHasComplaint() { return hasComplaint; }
     public void setHasComplaint(boolean hasComplaint) { this.hasComplaint = hasComplaint; }

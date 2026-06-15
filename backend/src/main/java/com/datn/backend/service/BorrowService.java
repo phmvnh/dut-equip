@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import com.datn.backend.dto.BorrowResponse;
 import com.datn.backend.dto.CreateBorrowRequest;
+import com.datn.backend.dto.EquipmentScheduleResponse;
 import com.datn.backend.dto.ReportDamageRequest;
 import com.datn.backend.enums.EquipmentStatus;
 
@@ -33,4 +34,7 @@ public interface BorrowService {
 
     // Trả đơn đang giữ thiết bị (APPROVED/OVERDUE) — để admin xem phòng/người mượn hiện tại
     Optional<BorrowResponse> getActiveBorrowByEquipment(Long equipmentId);
+
+    // Các khung giờ đã đặt của 1 thiết bị (PENDING/APPROVED/OVERDUE) — USER xem khi chọn giờ mượn
+    List<EquipmentScheduleResponse> getScheduleByEquipment(Long equipmentId);
 }

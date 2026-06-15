@@ -38,6 +38,13 @@ public class UploadController {
         return ResponseEntity.ok(Map.of("url", url));
     }
 
+    // POST /api/v1/uploads/payment-proof — USER upload ảnh hóa đơn minh chứng đã bồi thường.
+    @PostMapping(value = "/payment-proof", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadPaymentProof(@RequestParam("file") MultipartFile file) {
+        String url = cloudinaryService.uploadImage(file);
+        return ResponseEntity.ok(Map.of("url", url));
+    }
+
     // POST /api/v1/uploads/chat-image — ảnh đính kèm trong chat
     @PostMapping(value = "/chat-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadChatImage(@RequestParam("file") MultipartFile file) {

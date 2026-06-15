@@ -9,9 +9,52 @@ body,
   font-family: 'Inter', system-ui, sans-serif;
 }
 
+/* Luôn chừa chỗ thanh cuộn dọc để nội dung căn giữa không nhảy ngang khi
+   chuyển giữa trang/tab ngắn (không có scrollbar) và dài (có scrollbar). */
+html {
+  scrollbar-gutter: stable;
+}
+
 select {
   color-scheme: light;
   accent-color: #3b82f6;
+}
+
+/* Animation cho bottom-sheet mobile */
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-sheet-up {
+  animation: sheet-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-up,
+  .animate-fade-in {
+    animation: none;
+  }
+}
+
+/* Ẩn thanh cuộn cho hàng chip ngang */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Thẻ mềm dùng chung cho giao diện mobile — bóng tint nhẹ + ring mảnh thay viền xám generic */
+.card-soft {
+  @apply bg-white rounded-2xl ring-1 ring-black/[0.04];
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 10px 24px -16px rgba(0, 0, 0, 0.1);
 }
 
 select option:hover,

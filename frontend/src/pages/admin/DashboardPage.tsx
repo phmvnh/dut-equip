@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   BarChart,
+  Area,
+  AreaChart,
   Bar,
   CartesianGrid,
   Cell,
   LabelList,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -134,12 +134,16 @@ function formatRelative(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString('vi-VN');
 }
 
-const cardStyle: React.CSSProperties = { border: '1px solid #e5e7eb', borderRadius: 10 };
+const cardStyle: React.CSSProperties = {
+  borderRadius: 16,
+  border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.03), 0 12px 28px -18px rgba(0,0,0,0.14)',
+};
 
 // ============ Component ============
 
 export default function DashboardPage() {
-  const [trendMode, setTrendMode] = useState<TrendMode>('month');
+  const [trendMode, setTrendMode] = useState<TrendMode>('day');
 
   const statsQ = useQuery({
     queryKey: ['dashboard', 'stats'],
@@ -303,9 +307,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Line chart */}
         <div className="lg:col-span-2 bg-white" style={cardStyle}>
-          <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between gap-3">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold">Lượt mượn theo {trendMeta.unit}</h2>
+              <h2 className="font-semibold tracking-tight text-gray-900">Lượt mượn theo {trendMeta.unit}</h2>
               <p className="text-xs text-gray-500 mt-0.5">
                 {trendQ.isLoading
                   ? 'Đang tải…'
@@ -337,7 +341,13 @@ export default function DashboardPage() {
           </div>
           <div className="px-3 py-4">
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={trendData} margin={{ top: 8, right: 16, bottom: 0, left: -10 }}>
+              <AreaChart data={trendData} margin={{ top: 8, right: 16, bottom: 0, left: -10 }}>
+                <defs>
+                  <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity={0.18} />
+                    <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis
                   dataKey="label"
@@ -357,23 +367,24 @@ export default function DashboardPage() {
                   labelStyle={{ color: '#374151', fontWeight: 500 }}
                   formatter={(value) => [`${value} lượt mượn`, '']}
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="count"
                   stroke="#2563eb"
                   strokeWidth={2}
+                  fill="url(#trendFill)"
                   dot={{ r: 3, fill: '#2563eb' }}
                   activeDot={{ r: 5 }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Donut chart */}
         <div className="bg-white" style={cardStyle}>
-          <div className="px-5 py-4 border-b border-gray-200">
-            <h2 className="font-semibold">Mục đích sử dụng</h2>
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h2 className="font-semibold tracking-tight text-gray-900">Mục đích sử dụng</h2>
             <p className="text-xs text-gray-500 mt-0.5">
               {purposeQ.isLoading ? 'Đang tải…' : `12 tháng · ${purposeTotal} đơn`}
             </p>
@@ -434,56 +445,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Block 3: Bar chart phân bố theo khu */}
-      <div className="bg-white" style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-200">
-          <h2 className="font-semibold">Phân bố thiết bị theo khu/tòa</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {buildingQ.isLoading
-              ? 'Đang tải…'
-              : `${buildingShown.length} khu · ${buildingTotal} thiết bị`}
-          </p>
-        </div>
-        <div className="px-5 py-4">
-          <ResponsiveContainer width="100%" height={Math.max(260, buildingShown.length * 32)}>
-            <BarChart
-              data={buildingShown}
-              layout="vertical"
-              margin={{ top: 4, right: 36, bottom: 4, left: 8 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-              <XAxis
-                type="number"
-                allowDecimals={false}
-                tick={{ fontSize: 11, fill: '#6b7280' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={170}
-                tick={{ fontSize: 12, fill: '#374151' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                cursor={{ fill: '#f3f4f6' }}
-                contentStyle={{ border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12 }}
-                formatter={(value) => [`${value} thiết bị`, '']}
-              />
-              <Bar dataKey="count" fill="#2563eb" radius={[0, 6, 6, 0]} barSize={18}>
-                <LabelList dataKey="count" position="right" fill="#374151" fontSize={12} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
       {/* Block 4: Bảng "Thiết bị cần bảo trì" — AI Gemini */}
       <div className="bg-white" style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-200 flex items-center gap-2 flex-wrap">
-          <h2 className="font-semibold">Thiết bị cần bảo trì, sửa chữa sắp tới</h2>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2 flex-wrap">
+          <h2 className="font-semibold tracking-tight text-gray-900">Thiết bị cần bảo trì, sửa chữa sắp tới</h2>
           <span
             className="text-[10px] px-2 py-0.5 rounded-full font-medium"
             style={{ backgroundColor: '#f3e8ff', color: '#7e22ce' }}
@@ -580,7 +545,7 @@ export default function DashboardPage() {
             className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between gap-3">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-lg truncate">{selectedAi.equipmentName}</h3>
@@ -670,8 +635,8 @@ export default function DashboardPage() {
 
       {/* Block 5: Bảng "Hoạt động gần đây" */}
       <div className="bg-white" style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-200">
-          <h2 className="font-semibold">Hoạt động gần đây</h2>
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h2 className="font-semibold tracking-tight text-gray-900">Hoạt động gần đây</h2>
         </div>
         <table className="w-full text-sm">
           <thead className="text-left text-gray-500 bg-gray-50">
@@ -712,6 +677,52 @@ export default function DashboardPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Block cuối: Bar chart phân bố theo khu */}
+      <div className="bg-white" style={cardStyle}>
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h2 className="font-semibold tracking-tight text-gray-900">Phân bố thiết bị theo khu/tòa</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {buildingQ.isLoading
+              ? 'Đang tải…'
+              : `${buildingShown.length} khu · ${buildingTotal} thiết bị`}
+          </p>
+        </div>
+        <div className="px-5 py-4">
+          <ResponsiveContainer width="100%" height={Math.max(260, buildingShown.length * 32)}>
+            <BarChart
+              data={buildingShown}
+              layout="vertical"
+              margin={{ top: 4, right: 36, bottom: 4, left: 8 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+              <XAxis
+                type="number"
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: '#6b7280' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={170}
+                tick={{ fontSize: 12, fill: '#374151' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                cursor={{ fill: '#f3f4f6' }}
+                contentStyle={{ border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12 }}
+                formatter={(value) => [`${value} thiết bị`, '']}
+              />
+              <Bar dataKey="count" fill="#2563eb" radius={[0, 6, 6, 0]} barSize={18}>
+                <LabelList dataKey="count" position="right" fill="#374151" fontSize={12} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 }
@@ -740,7 +751,7 @@ function StatCard({ label, value, sub, subColor, iconBg, iconColor, icon, loadin
           </div>
         </div>
         <div
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
           style={{ backgroundColor: iconBg, color: iconColor }}
         >
           {icon}

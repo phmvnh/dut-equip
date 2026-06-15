@@ -8,6 +8,7 @@ interface Props {
   onCancel?: () => void;
   onExportPDF?: () => void;
   onResolveComplaint?: () => void;
+  onSubmitProof?: () => void;
 }
 
 const STATUS_PILL: Record<CompensationStatus, { label: string; bg: string; color: string }> = {
@@ -49,10 +50,15 @@ export default function CompensationDetailModal({
   onCancel,
   onExportPDF,
   onResolveComplaint,
+  onSubmitProof,
 }: Props) {
   const c = compensation;
   const status = c.status as CompensationStatus;
-  const pill = STATUS_PILL[status];
+  const hasProof = status === 'PENDING' && !!c.paymentProofUrl;
+  const canSubmitProof = status === 'PENDING' && !c.paymentProofUrl && !!onSubmitProof;
+  const pill = hasProof
+    ? { label: 'Đã nộp minh chứng', bg: '#dbeafe', color: '#1d4ed8' }
+    : STATUS_PILL[status];
   const isPending = status === 'PENDING';
   const complaintPending = c.hasComplaint && c.complaintStatus === 'PENDING_REVIEW';
 
@@ -163,6 +169,32 @@ export default function CompensationDetailModal({
             </div>
           </div>
 
+          {/* Minh chứng đã bồi thường (giảng viên nộp ảnh hóa đơn) */}
+          {c.paymentProofUrl && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+                </svg>
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Minh chứng đã bồi thường</p>
+              </div>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
+                <Row label="Nộp lúc" value={fmtDateTime(c.paymentProofSubmittedAt)} />
+                <div className="flex items-start gap-4">
+                  <span className="w-36 flex-shrink-0 text-xs text-gray-500 pt-0.5">Ảnh hóa đơn</span>
+                  <a
+                    href={c.paymentProofUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 block rounded-lg overflow-hidden border border-blue-200 hover:opacity-90 max-w-xs"
+                  >
+                    <img src={c.paymentProofUrl} alt="Minh chứng đã bồi thường" className="w-full max-h-60 object-contain bg-white" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Đơn mượn nguồn */}
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Đơn mượn nguồn</p>
@@ -231,13 +263,13 @@ export default function CompensationDetailModal({
         </div>
 
         {/* Footer */}
-        {(onExportPDF || (isPending && (onCancel || onConfirmPaid || onResolveComplaint))) && (
+        {(onExportPDF || canSubmitProof || (isPending && (onCancel || onConfirmPaid || onResolveComplaint))) && (
           <div className="px-6 py-4 border-t border-gray-100 flex justify-between gap-2">
             <div>
               {onExportPDF && (
                 <button
                   onClick={onExportPDF}
-                  className="h-9 px-4 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 inline-flex items-center gap-2"
+                  className="h-9 px-4 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 inline-flex items-center gap-2"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -248,6 +280,17 @@ export default function CompensationDetailModal({
               )}
             </div>
             <div className="flex gap-2">
+              {canSubmitProof && (
+                <button
+                  onClick={onSubmitProof}
+                  className="h-9 px-4 rounded-lg text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 inline-flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5V18a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1.5M12 3v12m0-12 4 4m-4-4-4 4" />
+                  </svg>
+                  Nộp minh chứng
+                </button>
+              )}
               {isPending && onCancel && (
                 <button
                   onClick={onCancel}

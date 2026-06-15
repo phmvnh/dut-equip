@@ -2,6 +2,7 @@ package com.datn.backend.scheduler;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -30,6 +31,8 @@ public class BorrowReminderScheduler {
     private static final long HOUR_LEAD_CAP_MINUTES = 60;
     private static final long DAY_LEAD_MINUTES = 24 * 60;
     private static final long LONG_BORROW_THRESHOLD_MINUTES = 24 * 60;
+    private static final long APPROVAL_REMINDER_LEAD_MINUTES = 15;
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm dd/MM");
 
     private final BorrowRequestRepository borrowRepo;
     private final NotificationService notificationService;
@@ -140,5 +143,49 @@ public class BorrowReminderScheduler {
             b.setLastOverdueAlertAt(now);
         }
         log.info("Đã nhắc lại {} đơn OVERDUE", overdue.size());
+    }
+
+    // Mỗi 5 phút — tự hủy đơn PENDING đã quá giờ bắt đầu mượn mà admin chưa duyệt.
+    // Duyệt trễ sẽ lỡ tiết dạy → đơn không còn ý nghĩa. Hủy để giải phóng slot của user.
+    @Scheduled(cron = "0 */5 * * * *")
+    @Transactional
+    public void cancelStalePending() {
+        LocalDateTime now = LocalDateTime.now();
+        List<BorrowRequest> stale = borrowRepo.findByStatusAndBorrowDateTimeBefore(BorrowStatus.PENDING, now);
+        if (stale.isEmpty()) return;
+
+        String reason = "Đã quá giờ bắt đầu mượn mà chưa được duyệt — đơn tự động hủy.";
+        for (BorrowRequest b : stale) {
+            b.setStatus(BorrowStatus.REJECTED);
+            b.setRejectReason(reason);
+            notificationService.create(
+                    b.getUser().getId(),
+                    NotificationType.BORROW_REJECTED,
+                    "Đơn mượn #" + b.getId() + " bị hủy",
+                    "Lý do: " + reason);
+        }
+        log.info("Đã tự hủy {} đơn PENDING quá giờ bắt đầu mượn", stale.size());
+    }
+
+    // Mỗi 5 phút — nhắc tất cả admin khi đơn PENDING còn <=15 phút nữa đến giờ bắt đầu mượn.
+    // approvalReminderSentAt đảm bảo mỗi đơn chỉ nhắc 1 lần.
+    @Scheduled(cron = "0 */5 * * * *")
+    @Transactional
+    public void remindAdminsPendingApproval() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime until = now.plusMinutes(APPROVAL_REMINDER_LEAD_MINUTES);
+        List<BorrowRequest> candidates = borrowRepo.findPendingApprovalReminders(BorrowStatus.PENDING, now, until);
+        if (candidates.isEmpty()) return;
+
+        for (BorrowRequest b : candidates) {
+            notificationService.createForAllAdmins(
+                    NotificationType.BORROW_APPROVAL_REMINDER,
+                    "Đơn mượn sắp đến giờ",
+                    "Đơn #" + b.getId() + " mượn " + b.getEquipment().getName()
+                            + " bắt đầu lúc " + b.getBorrowDateTime().format(TIME_FMT)
+                            + " mà chưa được duyệt.");
+            b.setApprovalReminderSentAt(now);
+        }
+        log.info("Đã nhắc admin {} đơn PENDING sắp đến giờ duyệt", candidates.size());
     }
 }

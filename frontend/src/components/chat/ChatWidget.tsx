@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useChatStore } from '../../store/chatStore';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import ChatThread from './ChatThread';
 
-// Floating chat widget — chỉ hiển thị khi user đã đăng nhập với role USER.
-// Admin có trang chat riêng, không dùng widget này.
+// Floating chat widget — chỉ hiển thị khi user đã đăng nhập với role USER trên desktop.
+// Mobile dùng tab Chat ở bottom nav (trang /chat riêng); admin có trang chat riêng.
 export default function ChatWidget() {
   const role = useAuthStore((s) => s.user?.role);
-  if (role !== 'USER') return null;
+  const isMobile = useIsMobile();
+  if (role !== 'USER' || isMobile) return null;
   return <ChatWidgetInner />;
 }
 

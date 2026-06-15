@@ -6,6 +6,7 @@ import com.datn.backend.dto.CompensationCreateRequest;
 import com.datn.backend.dto.CompensationResponse;
 import com.datn.backend.dto.ComplaintRequest;
 import com.datn.backend.dto.ComplaintResolveRequest;
+import com.datn.backend.dto.PaymentProofRequest;
 
 public interface CompensationService {
 
@@ -20,6 +21,9 @@ public interface CompensationService {
     CompensationResponse confirmPaid(Long id);
 
     CompensationResponse cancel(Long id);
+
+    // Giảng viên nộp minh chứng đã bồi thường (ảnh hóa đơn) — chỉ chủ phiếu
+    CompensationResponse submitPaymentProof(Long id, PaymentProofRequest request, Long userId);
 
     // Khiếu nại — chỉ chủ phiếu mới được gửi
     CompensationResponse submitComplaint(Long id, ComplaintRequest request, Long userId);

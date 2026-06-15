@@ -75,7 +75,7 @@ export default function HistoryTab() {
                 <th className="px-5 py-2.5 font-medium">Thiết bị</th>
                 <th className="px-5 py-2.5 font-medium">Khu / Phòng</th>
                 <th className="px-5 py-2.5 font-medium">Ngày mượn</th>
-                <th className="px-5 py-2.5 font-medium">Ngày trả dự kiến</th>
+                <th className="px-5 py-2.5 font-medium">Ngày trả</th>
                 <th className="px-5 py-2.5 font-medium">Trạng thái</th>
                 <th className="px-5 py-2.5 font-medium">Kết quả</th>
               </tr>

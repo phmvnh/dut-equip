@@ -16,3 +16,20 @@ target/
 
 # Môi trường
 .env
+
+# Tai lieu bao cao / mo ta - khong day len GitHub
+CLAUDE.md
+*BAO_CAO*.md
+*MO_TA*.md
+MUC_LUC_BAO_CAO.md
+MODEL_AI_CHI_TIET.md
+DESIGN-apple.md
+
+# Thu muc phu tro
+skills/
+diagrams/
+
+# Moi bien moi truong
+.env
+.env.*
+*.env

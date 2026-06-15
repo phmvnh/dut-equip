@@ -602,15 +602,36 @@ export default function BorrowPage() {
               </div>
 
               {/* Footer — chỉ render khi có action; bỏ nút "Đóng" vì đã có X góc phải */}
-              {b.damageReported && b.status === 'RETURNED' && b.equipmentStatus === 'BROKEN' && (
-                <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => { setMaintenanceTarget(b); setDetailTarget(null); }}
-                    className="h-9 px-4 rounded-lg text-sm font-semibold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200"
-                  >
-                    Tạo phiếu bảo trì
-                  </button>
+              {(status === 'PENDING'
+                || (b.damageReported && status === 'RETURNED' && b.equipmentStatus === 'BROKEN')) && (
+                <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+                  {status === 'PENDING' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { setRejectTarget(b); setRejectReason(''); setRejectError(''); setDetailTarget(null); }}
+                        className="h-9 px-4 rounded-lg text-sm font-semibold bg-red-100 text-red-800 border border-red-300 hover:bg-red-200"
+                      >
+                        Từ chối
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setConfirmAction({ kind: 'approve', target: b }); setDetailTarget(null); }}
+                        className="h-9 px-4 rounded-lg text-sm font-semibold bg-green-100 text-green-800 border border-green-300 hover:bg-green-200"
+                      >
+                        Duyệt
+                      </button>
+                    </>
+                  )}
+                  {b.damageReported && status === 'RETURNED' && b.equipmentStatus === 'BROKEN' && (
+                    <button
+                      type="button"
+                      onClick={() => { setMaintenanceTarget(b); setDetailTarget(null); }}
+                      className="h-9 px-4 rounded-lg text-sm font-semibold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200"
+                    >
+                      Tạo phiếu bảo trì
+                    </button>
+                  )}
                 </div>
               )}
             </div>

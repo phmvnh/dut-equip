@@ -14,7 +14,7 @@ public class ReportDamageRequest {
     private DamageSeverity severity;
 
     @NotBlank(message = "Vui lòng mô tả tình trạng thiết bị")
-    @Size(min = 10, max = 2000, message = "Mô tả lỗi phải từ 10 đến 2000 ký tự")
+    @Size(max = 2000, message = "Mô tả lỗi tối đa 2000 ký tự")
     private String description;
 
     @Size(max = 3, message = "Tối đa 3 ảnh minh chứng")

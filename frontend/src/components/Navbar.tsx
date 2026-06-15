@@ -48,7 +48,7 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2 flex-shrink-0">
           {/* <img src="/logo_dut_equip_no_bg.png" alt="DUT Equip" className="h-9 w-auto" /> */}
           <span className="text-lg font-semibold tracking-tight text-gray-900">DUT Equip - Hệ thống quản lý thiết bị công trường ĐH Bách Khoa Đà Nẵng</span>

@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { equipApi } from '../api/equipApi';
 import { borrowApi } from '../api/borrowApi';
 import StatusPill from './StatusPill';
+import EquipmentScheduleList from './EquipmentScheduleList';
 
 interface Props {
   equipment: Equipment;
@@ -73,7 +74,8 @@ export default function EquipmentDetailModal({ equipment, onClose, onBorrow, onE
   const goPrev = () => setActiveIdx((i) => (totalImages === 0 ? 0 : (i - 1 + totalImages) % totalImages));
   const goNext = () => setActiveIdx((i) => (totalImages === 0 ? 0 : (i + 1) % totalImages));
 
-  const canBorrow = !isAdmin && equipment.status === 'AVAILABLE';
+  // Cho mượn cả khi đang BORROWED (đặt khung giờ trống tương lai); BE chặn nếu trùng giờ.
+  const canBorrow = !isAdmin && (equipment.status === 'AVAILABLE' || equipment.status === 'BORROWED');
   const isAdminMode = !!(onEdit || onDelete || onCreateMaintenance || onToggleHidden || onDispose || onShowQr);
   // BE từ chối tạo phiếu BT khi thiết bị đang BORROWED
   const canCreateMaintenance = equipment.status !== 'BORROWED' && equipment.status !== 'DISPOSED';
@@ -285,6 +287,11 @@ export default function EquipmentDetailModal({ equipment, onClose, onBorrow, onE
                 />
               )}
             </Section>
+          )}
+
+          {/* Các khung giờ đã có người đặt — giúp người mượn chọn khung giờ trống */}
+          {!isAdminMode && !isDisposed && (
+            <EquipmentScheduleList equipmentId={equipment.id} className="mt-1" />
           )}
         </div>
 

@@ -52,6 +52,10 @@ public class User {
     @Column(length = 500)
     private String avatarUrl;
 
+    // Email cá nhân (Gmail) để nhận thông báo — null nghĩa là chưa thiết lập (lần đầu đăng nhập)
+    @Column(name = "personal_email", length = 255)
+    private String personalEmail;
+
     // Trạng thái kích hoạt — Admin có thể vô hiệu hoá tài khoản
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
@@ -135,6 +139,14 @@ public class User {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public String getPersonalEmail() {
+        return personalEmail;
+    }
+
+    public void setPersonalEmail(String personalEmail) {
+        this.personalEmail = personalEmail;
     }
 
     public boolean isActive() {

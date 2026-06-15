@@ -36,6 +36,21 @@ export const compensationApi = {
       .put<ApiResponseWrapper<Compensation>>(`/compensations/${id}/cancel`, {})
       .then((r) => r.data.data),
 
+  submitPaymentProof: (id: number, imageUrl: string) =>
+    axiosClient
+      .post<ApiResponseWrapper<Compensation>>(`/compensations/${id}/payment-proof`, { imageUrl })
+      .then((r) => r.data.data),
+
+  uploadPaymentProof: (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axiosClient
+      .post<{ url: string }>('/uploads/payment-proof', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data.url);
+  },
+
   submitComplaint: (id: number, payload: ComplaintCreatePayload) =>
     axiosClient
       .post<ApiResponseWrapper<Compensation>>(`/compensations/${id}/complaint`, payload)

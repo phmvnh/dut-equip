@@ -139,6 +139,58 @@ def _fetch_openmeteo_history() -> dict:
     }
 
 
+_hourly_cache: dict = {"data": None, "expires_at": datetime.min}
+
+
+def get_hourly_series() -> dict:
+    """Chuỗi thời tiết THEO GIỜ của Đà Nẵng (~90 ngày gần nhất) để tính
+    'phơi nhiễm môi trường khi sử dụng' — ghép từng lượt mượn với thời tiết tại
+    đúng giờ mượn. Trả dict: {"times": [datetime...], "humidity": [...],
+    "temp": [...], "precip": [...]}. Cache 1 giờ. Lỗi → trả chuỗi rỗng."""
+    global _hourly_cache
+    now = datetime.utcnow()
+    if _hourly_cache["data"] is not None and now < _hourly_cache["expires_at"]:
+        return _hourly_cache["data"]
+
+    empty = {"times": [], "humidity": [], "temp": [], "precip": []}
+    try:
+        with httpx.Client(timeout=15) as client:
+            r = client.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": settings.WEATHER_LAT,
+                    "longitude": settings.WEATHER_LON,
+                    "hourly": "temperature_2m,relative_humidity_2m,precipitation",
+                    "past_days": 90,
+                    "forecast_days": 1,
+                    "timezone": "Asia/Ho_Chi_Minh",
+                },
+            )
+            r.raise_for_status()
+            hourly = r.json().get("hourly", {})
+
+        raw_times = hourly.get("time", []) or []
+        times: list[datetime] = []
+        for t in raw_times:
+            try:
+                times.append(datetime.fromisoformat(t))
+            except (ValueError, TypeError):
+                times.append(None)
+
+        data = {
+            "times": times,
+            "humidity": hourly.get("relative_humidity_2m", []) or [],
+            "temp": hourly.get("temperature_2m", []) or [],
+            "precip": hourly.get("precipitation", []) or [],
+        }
+    except Exception as e:
+        log.error("Open-Meteo hourly series lỗi: %s — bỏ qua phơi nhiễm theo giờ", e)
+        data = empty
+
+    _hourly_cache = {"data": data, "expires_at": now + timedelta(hours=1)}
+    return data
+
+
 def get_danang_weather() -> dict:
     global _cache
     now = datetime.utcnow()

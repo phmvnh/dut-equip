@@ -19,6 +19,7 @@ const TYPE_BADGE_CLASS: Record<NotificationType, string> = {
   OVERDUE_ALERT:                   'bg-red-100 text-red-700',
   RETURN_CONFIRMED:                'bg-emerald-100 text-emerald-700',
   NEW_BORROW_REQUEST:              'bg-blue-100 text-blue-700',
+  BORROW_APPROVAL_REMINDER:        'bg-amber-100 text-amber-700',
   BORROW_RETURNED:                 'bg-emerald-100 text-emerald-700',
   MAINTENANCE_REMINDER:            'bg-amber-100 text-amber-700',
   MAINTENANCE_DONE:                'bg-emerald-100 text-emerald-700',
@@ -26,17 +27,22 @@ const TYPE_BADGE_CLASS: Record<NotificationType, string> = {
   WARRANTY_EXPIRING:               'bg-orange-100 text-orange-700',
   COMPENSATION_REQUIRED:           'bg-red-100 text-red-700',
   COMPENSATION_CONFIRMED:          'bg-emerald-100 text-emerald-700',
+  COMPENSATION_PROOF_SUBMITTED:    'bg-blue-100 text-blue-700',
   COMPENSATION_COMPLAINT_RECEIVED: 'bg-orange-100 text-orange-700',
   COMPENSATION_COMPLAINT_RESOLVED: 'bg-emerald-100 text-emerald-700',
 };
 
 interface Props {
   title?: string;
+  // Ẩn khối tiêu đề + nút "đánh dấu tất cả đã đọc" — dùng cho mobile (đã có header riêng ở trên)
+  hideHeader?: boolean;
+  // Xếp dọc từng item (tag ở trên, nội dung full-width bên dưới) — tối ưu cho màn hẹp (mobile)
+  stacked?: boolean;
 }
 
 const PAGE_SIZE = 20;
 
-export default function NotificationListView({ title = 'Thông báo' }: Props) {
+export default function NotificationListView({ title = 'Thông báo', hideHeader = false, stacked = false }: Props) {
   const [page, setPage] = useState(0);
   const queryClient = useQueryClient();
   const markReadInStore = useNotificationStore((s) => s.markRead);
@@ -79,18 +85,20 @@ export default function NotificationListView({ title = 'Thông báo' }: Props) {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Tất cả thông báo của bạn</p>
+      {!hideHeader && (
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Tất cả thông báo của bạn</p>
+          </div>
+          <button
+            onClick={handleMarkAllRead}
+            className="text-sm px-3 py-1.5 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100"
+          >
+            Đánh dấu tất cả đã đọc
+          </button>
         </div>
-        <button
-          onClick={handleMarkAllRead}
-          className="text-sm px-3 py-1.5 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100"
-        >
-          Đánh dấu tất cả đã đọc
-        </button>
-      </div>
+      )}
 
       {isLoading && (
         <div className="px-6 py-12 flex justify-center">
@@ -116,31 +124,61 @@ export default function NotificationListView({ title = 'Thông báo' }: Props) {
 
       {!isLoading && !isError && items.length > 0 && (
         <div className="divide-y divide-gray-100">
-          {items.map((n) => (
-            <button
-              key={n.id}
-              onClick={() => handleItemClick(n)}
-              className={`w-full text-left px-6 py-4 hover:bg-gray-50 transition-colors duration-150 flex items-start gap-4 ${n.read ? '' : 'bg-blue-50/40'}`}
-            >
+          {items.map((n) => {
+            const badge = (
               <span
                 className={`text-[11px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${TYPE_BADGE_CLASS[n.type] ?? 'bg-gray-100 text-gray-700'}`}
               >
                 {NOTIFICATION_TYPE_LABELS[n.type] ?? n.type}
               </span>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm leading-snug ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}`}>
-                  {n.title}
-                </p>
-                <p className="text-sm text-gray-500 mt-0.5">{n.message}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {formatRelative(n.createdAt)} · {formatDateTime(n.createdAt)}
-                </p>
-              </div>
-              {!n.read && (
-                <span className="w-2 h-2 mt-1.5 rounded-full bg-blue-500 flex-shrink-0" />
-              )}
-            </button>
-          ))}
+            );
+
+            // Mobile: xếp dọc — tag ở hàng trên (kèm chấm chưa đọc), nội dung full-width bên dưới
+            if (stacked) {
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => handleItemClick(n)}
+                  className={`w-full text-left px-4 py-3.5 hover:bg-gray-50 transition-colors duration-150 ${n.read ? '' : 'bg-blue-50/40'}`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    {badge}
+                    {!n.read && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />}
+                  </div>
+                  <p className={`text-sm leading-snug ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}`}>
+                    {n.title}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-0.5 leading-snug">{n.message}</p>
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    {formatRelative(n.createdAt)} · {formatDateTime(n.createdAt)}
+                  </p>
+                </button>
+              );
+            }
+
+            // Desktop: tag bên trái, nội dung bên phải
+            return (
+              <button
+                key={n.id}
+                onClick={() => handleItemClick(n)}
+                className={`w-full text-left px-6 py-4 hover:bg-gray-50 transition-colors duration-150 flex items-start gap-4 ${n.read ? '' : 'bg-blue-50/40'}`}
+              >
+                {badge}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm leading-snug ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}`}>
+                    {n.title}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-0.5">{n.message}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {formatRelative(n.createdAt)} · {formatDateTime(n.createdAt)}
+                  </p>
+                </div>
+                {!n.read && (
+                  <span className="w-2 h-2 mt-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 

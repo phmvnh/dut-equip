@@ -61,10 +61,10 @@ export default function AccountPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
-        <div className="flex gap-6 items-start">
+        <div className="flex gap-6 items-stretch">
           {/* Sidebar */}
-          <aside className="w-56 flex-shrink-0 sticky top-24">
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <aside className="w-56 flex-shrink-0">
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden h-full">
               {/* User card */}
               <div className="p-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
@@ -104,8 +104,9 @@ export default function AccountPage() {
             </div>
           </aside>
 
-          {/* Content */}
-          <main className="flex-1 min-w-0">
+          {/* Content — thẻ con h-full để luôn cao bằng sidebar (items-stretch
+              khiến cột thấp giãn bằng cột cao, hai bên luôn bằng nhau) */}
+          <main className="flex-1 min-w-0 [&>*]:h-full">
             <Outlet />
           </main>
         </div>

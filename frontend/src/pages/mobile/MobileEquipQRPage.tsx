@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { equipApi } from '../api/equipApi';
-import StatusPill from '../components/StatusPill';
+import { equipApi } from '../../api/equipApi';
+import StatusPill from '../../components/StatusPill';
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -27,9 +27,7 @@ export default function EquipmentQrViewPage() {
       {/* Header tối giản — không có Navbar */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
-            DUT
-          </div>
+          <img src="/logo_dut_equip_no_bg.png" alt="DUT Equip" className="w-9 h-9 object-contain shrink-0" />
           <div className="min-w-0">
             <h1 className="text-sm font-semibold text-gray-900 leading-tight">DUT Equip</h1>
             <p className="text-[11px] text-gray-500 leading-tight">Hệ thống quản lý thiết bị · ĐH Bách Khoa Đà Nẵng</p>

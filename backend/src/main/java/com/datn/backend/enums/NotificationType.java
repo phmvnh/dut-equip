@@ -11,11 +11,10 @@ public enum NotificationType {
     RETURN_CONFIRMED,     // Admin xác nhận user đã trả thiết bị
 
     // Liên quan đến đơn mượn — gửi cho ADMIN
-    NEW_BORROW_REQUEST,   // User tạo đơn mới chờ duyệt
-    BORROW_RETURNED,      // User xác nhận đã trả
+    NEW_BORROW_REQUEST,        // User tạo đơn mới chờ duyệt
+    BORROW_APPROVAL_REMINDER,  // Đơn PENDING sắp đến giờ mượn mà chưa được duyệt
 
     // Liên quan đến bảo trì — gửi cho ADMIN
-    MAINTENANCE_REMINDER, // Thiết bị sắp đến hạn bảo trì
     MAINTENANCE_DONE,     // Bảo trì hoàn thành → thiết bị sẵn sàng
 
     // Liên quan đến thiết bị — gửi cho ADMIN
@@ -23,8 +22,9 @@ public enum NotificationType {
     WARRANTY_EXPIRING,    // Bảo hành sắp hết hạn (30 ngày)
 
     // Liên quan đến bồi thường
-    COMPENSATION_REQUIRED,           // Gửi USER khi admin tạo phiếu bồi thường
-    COMPENSATION_CONFIRMED,          // Gửi USER khi admin xác nhận đã nhận tiền
-    COMPENSATION_COMPLAINT_RECEIVED, // Gửi ADMIN khi user khiếu nại
-    COMPENSATION_COMPLAINT_RESOLVED  // Gửi USER khi admin xử lý khiếu nại
+    COMPENSATION_REQUIRED,            // Gửi USER khi admin tạo phiếu bồi thường
+    COMPENSATION_CONFIRMED,           // Gửi USER khi admin xác nhận đã nhận tiền
+    COMPENSATION_PROOF_SUBMITTED,     // Gửi ADMIN khi giảng viên nộp minh chứng đã bồi thường
+    COMPENSATION_COMPLAINT_RECEIVED,  // Gửi ADMIN khi user khiếu nại
+    COMPENSATION_COMPLAINT_RESOLVED   // Gửi USER khi admin xử lý khiếu nại
 }

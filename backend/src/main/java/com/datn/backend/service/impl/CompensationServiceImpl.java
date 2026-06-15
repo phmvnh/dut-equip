@@ -15,6 +15,7 @@ import com.datn.backend.dto.CompensationCreateRequest;
 import com.datn.backend.dto.CompensationResponse;
 import com.datn.backend.dto.ComplaintRequest;
 import com.datn.backend.dto.ComplaintResolveRequest;
+import com.datn.backend.dto.PaymentProofRequest;
 import com.datn.backend.entity.BorrowRequest;
 import com.datn.backend.entity.CompensationClaim;
 import com.datn.backend.entity.User;
@@ -187,6 +188,37 @@ public class CompensationServiceImpl implements CompensationService {
                 NotificationType.COMPENSATION_CONFIRMED, // reuse type — message rõ ràng "đã hủy"
                 "Phiếu bồi thường đã hủy",
                 "Phiếu " + claim.getCode() + " đã bị hủy bởi quản trị viên. Bạn không cần bồi thường."
+        );
+
+        return CompensationResponse.from(claim);
+    }
+
+    @Override
+    public CompensationResponse submitPaymentProof(Long id, PaymentProofRequest request, Long userId) {
+        CompensationClaim claim = compensationRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu bồi thường"));
+
+        if (!claim.getUser().getId().equals(userId)) {
+            throw new BadRequestException("Bạn không có quyền nộp minh chứng cho phiếu này");
+        }
+        if (claim.getStatus() != CompensationStatus.PENDING) {
+            throw new BadRequestException("Chỉ nộp minh chứng cho phiếu đang chờ bồi thường");
+        }
+        // Đã nộp minh chứng rồi thì khóa — không cho nộp hoặc chỉnh sửa lại ảnh
+        if (claim.getPaymentProofUrl() != null) {
+            throw new BadRequestException("Phiếu đã có minh chứng, không thể nộp hoặc chỉnh sửa lại");
+        }
+
+        claim.setPaymentProofUrl(request.getImageUrl());
+        claim.setPaymentProofSubmittedAt(LocalDateTime.now());
+
+        log.info("User {} nộp minh chứng bồi thường phiếu {}", userId, claim.getCode());
+
+        notificationService.createForAllAdmins(
+                NotificationType.COMPENSATION_PROOF_SUBMITTED,
+                "Minh chứng bồi thường mới",
+                claim.getBorrowerName() + " đã nộp minh chứng đã bồi thường cho phiếu " + claim.getCode()
+                        + " (thiết bị " + claim.getEquipmentName() + "). Vui lòng kiểm tra và xác nhận."
         );
 
         return CompensationResponse.from(claim);

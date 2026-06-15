@@ -1,19 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import Navbar from '../components/Navbar';
-import FilterBar from '../components/FilterBar';
-import EquipmentRowCard from '../components/EquipmentRowCard';
-import EquipmentDetailModal from '../components/EquipmentDetailModal';
-import BorrowFormModal from '../components/BorrowFormModal';
-import Footer from '../components/Footer';
-import Toast from '../components/Toast';
-import type { Equipment, FilterParams } from '../types/equipment';
-import { equipApi } from '../api/equipApi';
-import { equipTypeApi } from '../api/equipTypeApi';
-import { borrowApi } from '../api/borrowApi';
-import { settingApi } from '../api/settingApi';
-import { useAuthStore } from '../store/authStore';
-import { useToastStore } from '../store/toastStore';
+import Navbar from '../../components/Navbar';
+import FilterBar from '../../components/FilterBar';
+import EquipmentRowCard from '../../components/EquipmentRowCard';
+import PersonalEmailBanner from '../../components/PersonalEmailBanner';
+import EquipmentDetailModal from '../../components/EquipmentDetailModal';
+import BorrowFormModal from '../../components/BorrowFormModal';
+import Footer from '../../components/Footer';
+import Toast from '../../components/Toast';
+import type { Equipment, FilterParams } from '../../types/equipment';
+import { equipApi } from '../../api/equipApi';
+import { equipTypeApi } from '../../api/equipTypeApi';
+import { borrowApi } from '../../api/borrowApi';
+import { settingApi } from '../../api/settingApi';
+import { useAuthStore } from '../../store/authStore';
+import { useToastStore } from '../../store/toastStore';
+
+const INITIAL_VISIBLE = 20;
 
 export default function HomePage() {
   const [filters, setFilters] = useState<FilterParams>({});
@@ -22,6 +25,7 @@ export default function HomePage() {
   const [borrowEquipment, setBorrowEquipment] = useState<Equipment | null>(null);
   const [duplicateAlertEquip, setDuplicateAlertEquip] = useState<Equipment | null>(null);
   const [limitAlertOpen, setLimitAlertOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
 
   const user = useAuthStore((s) => s.user);
   const showToast = useToastStore((s) => s.show);
@@ -58,6 +62,17 @@ export default function HomePage() {
       .slice()
       .sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
   }, [equipmentsRaw]);
+
+  // Đổi bộ lọc / tìm kiếm → quay lại số lượng hiển thị ban đầu
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE);
+  }, [filters, search]);
+
+  const visibleEquipments = useMemo(
+    () => equipments.slice(0, visibleCount),
+    [equipments, visibleCount]
+  );
+  const hasMore = visibleCount < equipments.length;
 
   // Đơn mượn active của user — pre-check để chặn click "Mượn ngay" trên thiết bị đã có đơn
   const { data: myBorrows = [] } = useQuery({
@@ -107,6 +122,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
+      <PersonalEmailBanner />
       <FilterBar
         filters={filters}
         onChange={setFilters}
@@ -152,16 +168,29 @@ export default function HomePage() {
                 <p className="text-base text-gray-400">Không tìm thấy thiết bị phù hợp</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {equipments.map((e) => (
-                  <EquipmentRowCard
-                    key={e.id}
-                    equipment={e}
-                    onDetail={setSelectedEquipment}
-                    onBorrow={handleBorrowClick}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {visibleEquipments.map((e) => (
+                    <EquipmentRowCard
+                      key={e.id}
+                      equipment={e}
+                      onDetail={setSelectedEquipment}
+                      onBorrow={handleBorrowClick}
+                    />
+                  ))}
+                </div>
+
+                {hasMore && (
+                  <div className="flex justify-center mt-8">
+                    <button
+                      onClick={() => setVisibleCount((c) => c + INITIAL_VISIBLE)}
+                      className="h-10 px-6 rounded-lg bg-white text-blue-700 border border-blue-300 text-sm font-medium hover:bg-blue-50 transition-colors"
+                    >
+                      Xem thêm
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}

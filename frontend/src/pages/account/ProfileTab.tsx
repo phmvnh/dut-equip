@@ -75,8 +75,8 @@ export default function ProfileTab() {
   const [error, setError] = useState('');
 
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ fullName: '', email: '', faculty: '', phone: '' });
-  const [formErrors, setFormErrors] = useState<{ fullName?: string; email?: string; faculty?: string; phone?: string }>({});
+  const [form, setForm] = useState({ fullName: '', email: '', faculty: '', phone: '', personalEmail: '' });
+  const [formErrors, setFormErrors] = useState<{ fullName?: string; email?: string; faculty?: string; phone?: string; personalEmail?: string }>({});
   const [saving, setSaving] = useState(false);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -127,6 +127,7 @@ export default function ProfileTab() {
       email: user.email,
       faculty: user.faculty ?? '',
       phone: user.phone ?? '',
+      personalEmail: user.personalEmail ?? '',
     });
     setFormErrors({});
     setEditing(true);
@@ -144,6 +145,8 @@ export default function ProfileTab() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errs.email = 'Email không hợp lệ';
     if (!form.faculty.trim()) errs.faculty = 'Khoa không được để trống';
     if (form.phone && form.phone.length > 20) errs.phone = 'Số điện thoại tối đa 20 ký tự';
+    if (form.personalEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.personalEmail.trim()))
+      errs.personalEmail = 'Email không hợp lệ';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -154,12 +157,16 @@ export default function ProfileTab() {
 
     setSaving(true);
     try {
-      const updated = await authApi.updateProfile({
+      let updated = await authApi.updateProfile({
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         faculty: form.faculty.trim(),
         phone: form.phone.trim() || undefined,
       });
+      const newPersonalEmail = form.personalEmail.trim();
+      if (newPersonalEmail && newPersonalEmail !== (user.personalEmail ?? '')) {
+        updated = await authApi.updatePersonalEmail({ personalEmail: newPersonalEmail });
+      }
       setLocalUser(updated);
       setUser(updated);
       setEditing(false);
@@ -303,6 +310,14 @@ export default function ProfileTab() {
                   placeholder="Nhập số điện thoại"
                   error={formErrors.phone}
                 />
+                <EditRow
+                  label="Gmail nhận thông báo"
+                  type="email"
+                  value={form.personalEmail}
+                  onChange={(v) => setForm((f) => ({ ...f, personalEmail: v }))}
+                  placeholder="ten@gmail.com"
+                  error={formErrors.personalEmail}
+                />
               </div>
               <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
                 <button
@@ -333,6 +348,7 @@ export default function ProfileTab() {
               <InfoRow label="Vai trò" value={ROLE_LABEL[user.role] ?? user.role} />
               <InfoRow label="Khoa" value={user.faculty} />
               <InfoRow label="Số điện thoại" value={user.phone} />
+              <InfoRow label="Gmail nhận thông báo" value={user.personalEmail ?? undefined} />
             </div>
           )}
         </>

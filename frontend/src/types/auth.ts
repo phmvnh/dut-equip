@@ -6,6 +6,7 @@ export interface User {
   faculty?: string;
   phone?: string;
   avatarUrl?: string;
+  personalEmail?: string | null;
 }
 
 export interface AuthResponse {
@@ -37,4 +38,8 @@ export interface UpdateProfileRequest {
   email: string;
   faculty?: string;
   phone?: string;
+}
+
+export interface UpdatePersonalEmailRequest {
+  personalEmail: string;
 }

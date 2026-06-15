@@ -54,6 +54,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse createUser(CreateUserRequest request) {
+        validateDutEmail(request.getEmail());
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email đã được sử dụng");
         }
@@ -71,6 +72,7 @@ public class UserServiceImpl implements UserService {
     public UserResponse updateUser(Long id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        validateDutEmail(request.getEmail());
         if (!user.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email đã được sử dụng");
         }
@@ -106,5 +108,13 @@ public class UserServiceImpl implements UserService {
             throw new ResourceNotFoundException("Không tìm thấy người dùng");
         }
         userRepository.deleteById(id);
+    }
+
+    // Chỉ chấp nhận email trường — áp dụng nhất quán cho cả admin tạo/sửa tài khoản,
+    // giống ràng buộc ở luồng tự đăng ký (AuthServiceImpl).
+    private void validateDutEmail(String email) {
+        if (email == null || !email.endsWith("@dut.udn.vn")) {
+            throw new BadRequestException("Chỉ chấp nhận email có định dạng @dut.udn.vn");
+        }
     }
 }

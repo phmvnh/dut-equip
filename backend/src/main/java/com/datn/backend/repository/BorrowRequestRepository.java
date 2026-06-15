@@ -42,6 +42,10 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
     Optional<BorrowRequest> findFirstByEquipmentIdAndStatusInOrderByBorrowDateTimeDesc(
             Long equipmentId, List<BorrowStatus> statuses);
 
+    // Các khung giờ đã đặt của 1 thiết bị (PENDING/APPROVED/OVERDUE) — USER xem khi chọn giờ mượn
+    List<BorrowRequest> findByEquipmentIdAndStatusInOrderByBorrowDateTimeAsc(
+            Long equipmentId, List<BorrowStatus> statuses);
+
     // Chặn xóa thiết bị có bất kỳ lịch sử đơn mượn nào (kể cả CANCELLED/REJECTED)
     boolean existsByEquipmentId(Long equipmentId);
 
@@ -63,6 +67,18 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
             @Param("borrowDT") LocalDateTime borrowDT,
             @Param("returnDT") LocalDateTime returnDT);
 
+    // Kiểm tra khung giờ [borrowDT, returnDT] có chồng lấp với đơn nào của equipment ở các status cho trước.
+    // Dùng khi tạo đơn để giữ chỗ theo khung giờ (ai đặt trước giữ chỗ). Không có excludeId vì đơn mới chưa lưu.
+    @Query("SELECT COUNT(b) > 0 FROM BorrowRequest b WHERE b.equipment.id = :equipmentId "
+            + "AND b.status IN :statuses "
+            + "AND b.borrowDateTime < :returnDT "
+            + "AND b.returnDateTime > :borrowDT")
+    boolean existsOverlappingByEquipmentAndStatusIn(
+            @Param("equipmentId") Long equipmentId,
+            @Param("statuses") List<BorrowStatus> statuses,
+            @Param("borrowDT") LocalDateTime borrowDT,
+            @Param("returnDT") LocalDateTime returnDT);
+
     // Đếm lượt sử dụng của 1 thiết bị (dùng cho EquipResponse.getById)
     long countByEquipmentIdAndStatusIn(Long equipmentId, List<BorrowStatus> statuses);
 
@@ -73,6 +89,18 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
 
     // Dùng bởi Scheduler — đơn APPROVED quá hạn
     List<BorrowRequest> findByStatusAndReturnDateTimeBefore(BorrowStatus status, LocalDateTime dateTime);
+
+    // Scheduler — đơn PENDING đã quá giờ bắt đầu mượn mà chưa duyệt → tự hủy
+    List<BorrowRequest> findByStatusAndBorrowDateTimeBefore(BorrowStatus status, LocalDateTime dateTime);
+
+    // Scheduler — đơn PENDING sắp đến giờ bắt đầu (trong [now, until]) mà chưa nhắc admin
+    @Query("SELECT b FROM BorrowRequest b WHERE b.status = :status "
+            + "AND b.approvalReminderSentAt IS NULL "
+            + "AND b.borrowDateTime > :now AND b.borrowDateTime <= :until")
+    List<BorrowRequest> findPendingApprovalReminders(
+            @Param("status") BorrowStatus status,
+            @Param("now") LocalDateTime now,
+            @Param("until") LocalDateTime until);
 
     // Dùng bởi Scheduler — đơn sắp đến hạn trả
     List<BorrowRequest> findByStatusAndReturnDateTimeBetween(BorrowStatus status, LocalDateTime from, LocalDateTime to);

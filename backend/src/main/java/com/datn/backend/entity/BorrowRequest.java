@@ -141,6 +141,10 @@ public class BorrowRequest {
     @Column(name = "last_overdue_alert_at")
     private LocalDateTime lastOverdueAlertAt;
 
+    // Đã nhắc admin "đơn PENDING sắp đến giờ mượn" — null = chưa gửi
+    @Column(name = "approval_reminder_sent_at")
+    private LocalDateTime approvalReminderSentAt;
+
     // Thời điểm tạo đơn — set 1 lần khi insert
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -234,6 +238,9 @@ public class BorrowRequest {
 
     public LocalDateTime getLastOverdueAlertAt() { return lastOverdueAlertAt; }
     public void setLastOverdueAlertAt(LocalDateTime lastOverdueAlertAt) { this.lastOverdueAlertAt = lastOverdueAlertAt; }
+
+    public LocalDateTime getApprovalReminderSentAt() { return approvalReminderSentAt; }
+    public void setApprovalReminderSentAt(LocalDateTime approvalReminderSentAt) { this.approvalReminderSentAt = approvalReminderSentAt; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

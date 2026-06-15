@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { Equipment } from '../types/equipment';
 import { useAuthStore } from '../store/authStore';
-import { buildingApi, MOCK_BUILDINGS, type BuildingResponse } from '../api/buildingApi';
+import { useToastStore } from '../store/toastStore';
+import { buildingApi, type BuildingResponse } from '../api/buildingApi';
 import { borrowApi, type PurposeType } from '../api/borrowApi';
 import StatusPill from './StatusPill';
+import EquipmentScheduleList from './EquipmentScheduleList';
 
 interface Props {
   equipment: Equipment;
@@ -134,11 +136,12 @@ const inputCls = (error?: string) =>
 
 export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSuccess }: Props) {
   const user = useAuthStore((s) => s.user);
+  const showToast = useToastStore((s) => s.show);
 
   const defaultBorrow = defaultBorrowDatetime();
   const defaultReturn = defaultReturnFromBorrow(defaultBorrow);
 
-  const [buildings, setBuildings] = useState<BuildingResponse[]>(MOCK_BUILDINGS);
+  const [buildings, setBuildings] = useState<BuildingResponse[]>([]);
 
   const [form, setForm] = useState({
     fullName:      user?.fullName ?? '',
@@ -160,8 +163,10 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
   const [limitReached, setLimitReached] = useState<string | null>(null);
 
   useEffect(() => {
-    buildingApi.getAll().then(setBuildings);
-  }, []);
+    buildingApi.getAll()
+      .then(setBuildings)
+      .catch(() => showToast('Không tải được danh sách khu, vui lòng thử lại', 'error'));
+  }, [showToast]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -235,7 +240,10 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
       setSubmitted(true);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      if (msg && (msg.startsWith('Bạn đang mượn tối đa') || msg.startsWith('Bạn đã có một đơn mượn đang xử lý'))) {
+      if (msg && (msg.startsWith('Bạn đang mượn tối đa')
+               || msg.startsWith('Bạn đã có một đơn mượn đang xử lý')
+               || msg.startsWith('Khung giờ này đã có người đặt')
+               || msg.startsWith('Thiết bị đang quá hạn'))) {
         setLimitReached(msg);
       } else {
         setErrors({ submit: msg || 'Gửi đơn thất bại. Vui lòng thử lại.' });
@@ -486,6 +494,7 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
                       </div>
                     </Field>
                   </div>
+                  <EquipmentScheduleList equipmentId={equipment.id} />
                   <Field label="Mục đích sử dụng" required error={errors.purpose}>
                     <select
                       value={form.purpose}

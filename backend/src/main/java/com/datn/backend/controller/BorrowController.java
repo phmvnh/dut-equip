@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.datn.backend.dto.BorrowResponse;
 import com.datn.backend.dto.CreateBorrowRequest;
+import com.datn.backend.dto.EquipmentScheduleResponse;
 import com.datn.backend.dto.ReportDamageRequest;
 import com.datn.backend.entity.User;
 import com.datn.backend.enums.EquipmentStatus;
@@ -124,6 +125,13 @@ public class BorrowController {
         return borrowService.getActiveBorrowByEquipment(equipmentId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    // GET /api/v1/borrows/schedule-by-equipment/{equipmentId} — các khung giờ đã đặt của thiết bị.
+    // Cho mọi user đăng nhập xem (chọn giờ trống khi mượn) — chỉ trả giờ + trạng thái, không kèm PII.
+    @GetMapping("/schedule-by-equipment/{equipmentId}")
+    public ResponseEntity<List<EquipmentScheduleResponse>> getScheduleByEquipment(@PathVariable Long equipmentId) {
+        return ResponseEntity.ok(borrowService.getScheduleByEquipment(equipmentId));
     }
 
     // POST /api/v1/borrows/{id}/report-damage — chủ đơn báo hỏng (1 lần/đơn)

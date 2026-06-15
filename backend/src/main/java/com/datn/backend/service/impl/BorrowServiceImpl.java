@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.datn.backend.dto.BorrowResponse;
 import com.datn.backend.dto.CreateBorrowRequest;
+import com.datn.backend.dto.EquipmentScheduleResponse;
 import com.datn.backend.dto.ReportDamageRequest;
 import com.datn.backend.entity.BorrowRequest;
 import com.datn.backend.entity.Building;
@@ -70,10 +71,14 @@ public class BorrowServiceImpl implements BorrowService {
 
     @Override
     public BorrowResponse create(CreateBorrowRequest request, Long userId) {
-        // 1. Thiết bị tồn tại và status = AVAILABLE
+        // 1. Thiết bị tồn tại và không ở trạng thái vật lý không khả dụng.
+        // AVAILABLE/BORROWED đều cho đi tiếp — khả năng mượn theo khung giờ do overlap quyết định (bước 6b).
         Equipment equipment = equipmentRepo.findById(request.getEquipmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thiết bị"));
-        if (equipment.getStatus() != EquipmentStatus.AVAILABLE) {
+        EquipmentStatus equipStatus = equipment.getStatus();
+        if (equipStatus == EquipmentStatus.MAINTENANCE
+                || equipStatus == EquipmentStatus.BROKEN
+                || equipStatus == EquipmentStatus.DISPOSED) {
             throw new BadRequestException("Thiết bị không có sẵn để mượn");
         }
 
@@ -105,6 +110,20 @@ public class BorrowServiceImpl implements BorrowService {
         // 6. Khoảng cách <= 7 ngày
         if (returnDT.isAfter(borrowDT.plusDays(MAX_BORROW_DAYS))) {
             throw new BadRequestException("Thời gian mượn tối đa 7 ngày");
+        }
+
+        // 6a. Thiết bị đang quá hạn chưa trả → vật lý không có sẵn, thời điểm rảnh chưa rõ → chặn
+        if (borrowRepo.existsByEquipmentIdAndStatusIn(equipment.getId(), List.of(BorrowStatus.OVERDUE))) {
+            throw new BadRequestException("Thiết bị đang quá hạn chưa được trả. Vui lòng chọn thiết bị khác.");
+        }
+
+        // 6b. Trùng khung giờ với đơn đang giữ chỗ (PENDING) hoặc đã duyệt (APPROVED) → ai đặt trước giữ chỗ
+        boolean slotTaken = borrowRepo.existsOverlappingByEquipmentAndStatusIn(
+                equipment.getId(),
+                List.of(BorrowStatus.PENDING, BorrowStatus.APPROVED),
+                borrowDT, returnDT);
+        if (slotTaken) {
+            throw new BadRequestException("Khung giờ này đã có người đặt mượn. Vui lòng chọn khung giờ khác.");
         }
 
         // 7. Đếm đơn active (PENDING + APPROVED) < maxConcurrent (đọc động từ Setting do Admin cấu hình)
@@ -209,6 +228,10 @@ public class BorrowServiceImpl implements BorrowService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn mượn"));
         if (borrow.getStatus() != BorrowStatus.PENDING) {
             throw new BadRequestException("Đơn mượn không ở trạng thái chờ duyệt");
+        }
+        // Đã quá giờ bắt đầu mượn → duyệt cũng vô nghĩa (lỡ tiết dạy, sẽ thành OVERDUE ngay). Chặn.
+        if (borrow.getBorrowDateTime().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Đơn đã quá giờ bắt đầu mượn, không thể duyệt.");
         }
         borrow.setStatus(BorrowStatus.APPROVED);
         borrow.setPreBorrowConditionNote(preBorrowConditionNote.trim());
@@ -376,5 +399,17 @@ public class BorrowServiceImpl implements BorrowService {
                         equipmentId,
                         Arrays.asList(BorrowStatus.APPROVED, BorrowStatus.OVERDUE))
                 .map(BorrowResponse::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EquipmentScheduleResponse> getScheduleByEquipment(Long equipmentId) {
+        return borrowRepo
+                .findByEquipmentIdAndStatusInOrderByBorrowDateTimeAsc(
+                        equipmentId,
+                        Arrays.asList(BorrowStatus.PENDING, BorrowStatus.APPROVED, BorrowStatus.OVERDUE))
+                .stream()
+                .map(EquipmentScheduleResponse::from)
+                .collect(Collectors.toList());
     }
 }

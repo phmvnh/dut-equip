@@ -10,7 +10,9 @@ interface EquipmentRowCardProps {
 
 export default function EquipmentRowCard({ equipment, onDetail, onBorrow }: EquipmentRowCardProps) {
   const isAdmin = useAuthStore((s) => s.user?.role === 'ADMIN');
-  const canBorrow = !isAdmin && equipment.status === 'AVAILABLE';
+  // Cho đặt cả khi đang BORROWED (đặt khung giờ tương lai); backend chặn nếu trùng giờ.
+  // Chỉ khóa khi thiết bị vật lý không khả dụng (MAINTENANCE/BROKEN/DISPOSED).
+  const canBorrow = !isAdmin && (equipment.status === 'AVAILABLE' || equipment.status === 'BORROWED');
 
   return (
     <div

@@ -6,6 +6,7 @@ import com.datn.backend.dto.AuthResponse;
 import com.datn.backend.dto.ChangePasswordRequest;
 import com.datn.backend.dto.LoginRequest;
 import com.datn.backend.dto.RegisterRequest;
+import com.datn.backend.dto.UpdatePersonalEmailRequest;
 import com.datn.backend.dto.UpdateProfileRequest;
 
 public interface AuthService {
@@ -17,6 +18,8 @@ public interface AuthService {
     AuthResponse.UserInfo me(String email);
 
     AuthResponse.UserInfo updateProfile(String email, UpdateProfileRequest request);
+
+    AuthResponse.UserInfo updatePersonalEmail(String email, UpdatePersonalEmailRequest request);
 
     AuthResponse.UserInfo updateAvatar(String email, MultipartFile file);
 

@@ -11,13 +11,11 @@ Hệ thống cho phép giảng viên mượn/trả thiết bị công của trư
 ┌──────────────┐    ┌─────────────────┐    ┌──────────────────┐
 │  Frontend    │───►│  Backend        │───►│  AI Service      │
 │  React+Vite  │    │  Spring Boot    │    │  FastAPI Python  │
-│  :5173       │    │  :8080          │    │  :8000           │
 └──────────────┘    └────────┬────────┘    └────────┬─────────┘
                              │                      │
                              ▼                      │
                      ┌────────────────┐             │
                      │  MySQL 8       │◄────────────┘
-                     │  dut_equip   │
                      └────────────────┘
 ```
 
@@ -26,7 +24,7 @@ Hệ thống cho phép giảng viên mượn/trả thiết bị công của trư
 | Frontend | 5173 | React 19 + TypeScript + Vite + Tailwind + Zustand + React Query |
 | Backend | 8080 | Spring Boot 3.2 (Java 21) + Spring Security + JWT + WebSocket |
 | AI Service | 8000 | FastAPI + Gemini API + OpenWeather + APScheduler |
-| Database | 3306 | MySQL 8 (schema: `qltbc_draft`) |
+| Database | 3306 | MySQL 8 |
 
 ---
 

@@ -49,6 +49,7 @@ public class AuthResponse {
         private String faculty;
         private String phone;
         private String avatarUrl;
+        private String personalEmail;
 
         public static UserInfo from(User u) {
             UserInfo info = new UserInfo();
@@ -59,6 +60,7 @@ public class AuthResponse {
             info.faculty = u.getFaculty();
             info.phone = u.getPhone();
             info.avatarUrl = u.getAvatarUrl();
+            info.personalEmail = u.getPersonalEmail();
             return info;
         }
 
@@ -116,6 +118,14 @@ public class AuthResponse {
 
         public void setAvatarUrl(String avatarUrl) {
             this.avatarUrl = avatarUrl;
+        }
+
+        public String getPersonalEmail() {
+            return personalEmail;
+        }
+
+        public void setPersonalEmail(String personalEmail) {
+            this.personalEmail = personalEmail;
         }
     }
 }

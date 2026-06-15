@@ -29,6 +29,8 @@ public class CompensationResponse {
     private String damageDescription;
     private String status;
     private LocalDateTime paidAt;
+    private String paymentProofUrl;
+    private LocalDateTime paymentProofSubmittedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -66,6 +68,8 @@ public class CompensationResponse {
         dto.damageDescription    = c.getDamageDescription();
         dto.status               = c.getStatus().name();
         dto.paidAt               = c.getPaidAt();
+        dto.paymentProofUrl      = c.getPaymentProofUrl();
+        dto.paymentProofSubmittedAt = c.getPaymentProofSubmittedAt();
         dto.createdAt            = c.getCreatedAt();
         dto.updatedAt            = c.getUpdatedAt();
 
@@ -101,6 +105,8 @@ public class CompensationResponse {
     public String getDamageDescription() { return damageDescription; }
     public String getStatus() { return status; }
     public LocalDateTime getPaidAt() { return paidAt; }
+    public String getPaymentProofUrl() { return paymentProofUrl; }
+    public LocalDateTime getPaymentProofSubmittedAt() { return paymentProofSubmittedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public boolean isHasComplaint() { return hasComplaint; }

@@ -9,6 +9,7 @@ import com.datn.backend.dto.AuthResponse;
 import com.datn.backend.dto.ChangePasswordRequest;
 import com.datn.backend.dto.LoginRequest;
 import com.datn.backend.dto.RegisterRequest;
+import com.datn.backend.dto.UpdatePersonalEmailRequest;
 import com.datn.backend.dto.UpdateProfileRequest;
 import com.datn.backend.entity.User;
 import com.datn.backend.enums.UserRole;
@@ -107,6 +108,20 @@ public class AuthServiceImpl implements AuthService {
         user.setFaculty(request.getFaculty());
         user.setPhone(request.getPhone());
 
+        return AuthResponse.UserInfo.from(userRepository.save(user));
+    }
+
+    @Override
+    public AuthResponse.UserInfo updatePersonalEmail(String email, UpdatePersonalEmailRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy tài khoản"));
+
+        String personalEmail = request.getPersonalEmail().trim();
+        if (personalEmail.equalsIgnoreCase(user.getEmail())) {
+            throw new BadRequestException("Email cá nhân phải khác email trường");
+        }
+
+        user.setPersonalEmail(personalEmail);
         return AuthResponse.UserInfo.from(userRepository.save(user));
     }
 

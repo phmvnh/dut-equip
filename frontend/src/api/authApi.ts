@@ -1,5 +1,5 @@
 import axiosClient from './axiosClient';
-import type { AuthResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, UpdateProfileRequest, User } from '../types/auth';
+import type { AuthResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, UpdatePersonalEmailRequest, UpdateProfileRequest, User } from '../types/auth';
 
 export const authApi = {
   login: (data: LoginRequest) =>
@@ -13,6 +13,9 @@ export const authApi = {
 
   updateProfile: (data: UpdateProfileRequest) =>
     axiosClient.put<User>('/auth/me', data).then((r) => r.data),
+
+  updatePersonalEmail: (data: UpdatePersonalEmailRequest) =>
+    axiosClient.put<User>('/auth/me/personal-email', data).then((r) => r.data),
 
   uploadAvatar: (file: File) => {
     const formData = new FormData();

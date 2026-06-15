@@ -7,3 +7,12 @@ export const statusConfig: Record<EquipmentStatus, { label: string; color: strin
   BROKEN: { label: 'Hỏng', color: 'bg-red-100 text-red-700' },
   DISPOSED: { label: 'Đã thanh lý', color: 'bg-gray-200 text-gray-600' },
 };
+
+// Màu chấm trạng thái — kiểu hiển thị gọn (dot + nhãn) cho giao diện mobile
+export const statusDotColor: Record<EquipmentStatus, string> = {
+  AVAILABLE: 'bg-emerald-500',
+  BORROWED: 'bg-amber-500',
+  MAINTENANCE: 'bg-violet-500',
+  BROKEN: 'bg-red-500',
+  DISPOSED: 'bg-gray-400',
+};

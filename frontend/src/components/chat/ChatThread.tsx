@@ -189,7 +189,7 @@ export default function ChatThread({ conversationId, targetUserId }: Props) {
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-blue-50 via-blue-50/40 to-white">
-      <div ref={scrollerRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+      <div ref={scrollerRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-1">
         {isLoading && messages.length === 0 ? (
           <p className="text-center text-sm text-gray-400 py-8">Đang tải tin nhắn...</p>
         ) : messages.length === 0 ? (
@@ -298,8 +298,16 @@ export default function ChatThread({ conversationId, targetUserId }: Props) {
               handleSend();
             }
           }}
+          onFocus={() => {
+            // Khi bàn phím bật lên (mobile), neo khung chat về cuối — chờ animation bàn phím
+            setTimeout(() => {
+              const el = scrollerRef.current;
+              if (el) el.scrollTop = el.scrollHeight;
+            }, 300);
+          }}
           placeholder={uploading ? `Đang tải ${uploading === 'image' ? 'ảnh' : 'file'}...` : 'Nhập tin nhắn...'}
-          className="flex-1 resize-none rounded-full border border-blue-200 bg-white px-4 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 max-h-32 transition-all"
+          // text-base (16px) ở mobile để iOS không auto-zoom khi focus; md:text-sm giữ nguyên desktop
+          className="flex-1 resize-none rounded-full border border-blue-200 bg-white px-4 py-2 text-base md:text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 max-h-32 transition-all"
         />
         <button
           type="button"
