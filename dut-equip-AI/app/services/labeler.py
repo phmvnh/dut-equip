@@ -49,7 +49,9 @@ def run(db: Session) -> int:
     """Gắn nhãn các dòng đã 'chín' và chưa có nhãn. Trả số dòng đã gắn."""
     horizon = timedelta(days=settings.AI_LABEL_HORIZON_DAYS)
     now = datetime.now()
-    cutoff = now - horizon  # chỉ gắn dòng đã đủ thời gian quan sát
+    # Chỉ gắn nhãn dự đoán đã tạo đủ `horizon` ngày trước.
+    # Dự đoán "hôm nay" chưa thể biết kết quả thực tế → phải chờ đủ cửa sổ quan sát.
+    cutoff = now - horizon
 
     rows = db.execute(
         select(AiPredictionHistory.id, AiPredictionHistory.equipment_id,
@@ -76,9 +78,10 @@ def run(db: Session) -> int:
         label = 0
         candidates = [t for t in (maint_at, damage_at) if t is not None]
         if candidates:
+            # label=1 = "có sự kiện thực tế" → dự đoán HIGH/will_fail_in_7d là đúng.
             label = 1
             observed_at = min(candidates)
-            # ưu tiên ghi nguồn xảy ra sớm hơn
+            # Ghi event_type theo sự kiện xảy ra SỚM HƠN (gần với thời điểm dự đoán nhất).
             if damage_at is not None and (maint_at is None or damage_at <= maint_at):
                 event_type = "DAMAGE_REPORT"
             else:

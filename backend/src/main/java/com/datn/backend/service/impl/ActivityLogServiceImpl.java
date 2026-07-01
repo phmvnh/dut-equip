@@ -16,18 +16,27 @@ import org.springframework.transaction.annotation.Transactional;
 import com.datn.backend.dto.ActivityLogResponse;
 import com.datn.backend.entity.BorrowRequest;
 import com.datn.backend.entity.CompensationClaim;
+import com.datn.backend.entity.DepartmentLoan;
+import com.datn.backend.entity.DisposalRequest;
 import com.datn.backend.entity.Equipment;
 import com.datn.backend.entity.MaintenanceLog;
+import com.datn.backend.entity.ProcurementRequest;
 import com.datn.backend.entity.User;
 import com.datn.backend.enums.BorrowStatus;
 import com.datn.backend.enums.CompensationStatus;
+import com.datn.backend.enums.DepartmentLoanStatus;
+import com.datn.backend.enums.DisposalStatus;
 import com.datn.backend.enums.EquipmentStatus;
 import com.datn.backend.enums.MaintenanceStatus;
+import com.datn.backend.enums.ProcurementStatus;
 import com.datn.backend.enums.UserRole;
 import com.datn.backend.repository.BorrowRequestRepository;
 import com.datn.backend.repository.CompensationClaimRepository;
+import com.datn.backend.repository.DepartmentLoanRepository;
+import com.datn.backend.repository.DisposalRequestRepository;
 import com.datn.backend.repository.EquipmentRepository;
 import com.datn.backend.repository.MaintenanceLogRepository;
+import com.datn.backend.repository.ProcurementRequestRepository;
 import com.datn.backend.repository.UserRepository;
 import com.datn.backend.service.ActivityLogService;
 
@@ -35,22 +44,31 @@ import com.datn.backend.service.ActivityLogService;
 @Transactional(readOnly = true)
 public class ActivityLogServiceImpl implements ActivityLogService {
 
-    private final BorrowRequestRepository     borrowRepo;
-    private final MaintenanceLogRepository    maintenanceRepo;
-    private final CompensationClaimRepository compensationRepo;
-    private final EquipmentRepository         equipmentRepo;
-    private final UserRepository              userRepo;
+    private final BorrowRequestRepository      borrowRepo;
+    private final MaintenanceLogRepository     maintenanceRepo;
+    private final CompensationClaimRepository  compensationRepo;
+    private final EquipmentRepository          equipmentRepo;
+    private final UserRepository               userRepo;
+    private final ProcurementRequestRepository procurementRepo;
+    private final DisposalRequestRepository    disposalRepo;
+    private final DepartmentLoanRepository     departmentLoanRepo;
 
     public ActivityLogServiceImpl(BorrowRequestRepository borrowRepo,
                                   MaintenanceLogRepository maintenanceRepo,
                                   CompensationClaimRepository compensationRepo,
                                   EquipmentRepository equipmentRepo,
-                                  UserRepository userRepo) {
-        this.borrowRepo       = borrowRepo;
-        this.maintenanceRepo  = maintenanceRepo;
-        this.compensationRepo = compensationRepo;
-        this.equipmentRepo    = equipmentRepo;
-        this.userRepo         = userRepo;
+                                  UserRepository userRepo,
+                                  ProcurementRequestRepository procurementRepo,
+                                  DisposalRequestRepository disposalRepo,
+                                  DepartmentLoanRepository departmentLoanRepo) {
+        this.borrowRepo          = borrowRepo;
+        this.maintenanceRepo     = maintenanceRepo;
+        this.compensationRepo    = compensationRepo;
+        this.equipmentRepo       = equipmentRepo;
+        this.userRepo            = userRepo;
+        this.procurementRepo     = procurementRepo;
+        this.disposalRepo        = disposalRepo;
+        this.departmentLoanRepo  = departmentLoanRepo;
     }
 
     @Override
@@ -192,6 +210,110 @@ public class ActivityLogServiceImpl implements ActivityLogService {
                             + (u.getFaculty() != null ? " — " + u.getFaculty() : ""),
                     u.getCreatedAt(),
                     "USER", u.getId()));
+        }
+
+        // --- ProcurementRequest (mua sắm) ---
+        for (ProcurementRequest p : procurementRepo.findAll()) {
+            String info = "Đề nghị " + p.getCode() + " — \"" + p.getTitle() + "\""
+                    + " — Người lập: " + p.getRequestedBy().getFullName();
+
+            all.add(new ActivityLogResponse(
+                    "PROCUREMENT_CREATED",
+                    "Đã lập đề nghị mua sắm " + p.getCode(),
+                    info,
+                    p.getCreatedAt(),
+                    "PROCUREMENT", p.getId()));
+
+            if (p.getApprovedAt() != null) {
+                all.add(new ActivityLogResponse(
+                        "PROCUREMENT_APPROVED",
+                        "Đã duyệt đề nghị mua sắm " + p.getCode(),
+                        info + (p.getDecisionNo() != null ? " — QĐ: " + p.getDecisionNo() : ""),
+                        p.getApprovedAt(),
+                        "PROCUREMENT", p.getId()));
+            }
+            if (p.getStatus() == ProcurementStatus.COMPLETED) {
+                all.add(new ActivityLogResponse(
+                        "PROCUREMENT_COMPLETED",
+                        "Đã nghiệm thu nhập kho đề nghị " + p.getCode(),
+                        info,
+                        p.getCompletedAt() != null ? p.getCompletedAt() : p.getUpdatedAt(),
+                        "PROCUREMENT", p.getId()));
+            } else if (p.getStatus() == ProcurementStatus.REJECTED) {
+                all.add(new ActivityLogResponse(
+                        "PROCUREMENT_REJECTED",
+                        "Đã từ chối đề nghị mua sắm " + p.getCode(),
+                        info,
+                        p.getUpdatedAt(),
+                        "PROCUREMENT", p.getId()));
+            }
+        }
+
+        // --- DisposalRequest (thanh lý) ---
+        for (DisposalRequest d : disposalRepo.findAll()) {
+            String info = "Đề nghị " + d.getCode() + " — thiết bị " + d.getEquipmentName()
+                    + " (" + d.getEquipmentCode() + ")";
+
+            all.add(new ActivityLogResponse(
+                    "DISPOSAL_CREATED",
+                    "Đã lập đề nghị thanh lý " + d.getCode(),
+                    info,
+                    d.getCreatedAt(),
+                    "DISPOSAL", d.getId()));
+
+            if (d.getApprovedAt() != null) {
+                all.add(new ActivityLogResponse(
+                        "DISPOSAL_APPROVED",
+                        "Đã duyệt đề nghị thanh lý " + d.getCode(),
+                        info + (d.getDecisionNo() != null ? " — QĐ: " + d.getDecisionNo() : ""),
+                        d.getApprovedAt(),
+                        "DISPOSAL", d.getId()));
+            }
+            if (d.getStatus() == DisposalStatus.COMPLETED) {
+                all.add(new ActivityLogResponse(
+                        "DISPOSAL_COMPLETED",
+                        "Đã thực hiện thanh lý " + d.getCode(),
+                        info,
+                        d.getCompletedAt() != null ? d.getCompletedAt() : d.getUpdatedAt(),
+                        "DISPOSAL", d.getId()));
+            } else if (d.getStatus() == DisposalStatus.REJECTED) {
+                all.add(new ActivityLogResponse(
+                        "DISPOSAL_REJECTED",
+                        "Đã từ chối đề nghị thanh lý " + d.getCode(),
+                        info,
+                        d.getUpdatedAt(),
+                        "DISPOSAL", d.getId()));
+            }
+        }
+
+        // --- DepartmentLoan (cho khoa mượn dài hạn) ---
+        for (DepartmentLoan dl : departmentLoanRepo.findAll()) {
+            String info = "Phiếu " + dl.getCode() + " — " + dl.getEquipmentName()
+                    + " (" + dl.getEquipmentCode() + ") — Khoa: " + dl.getDepartmentName();
+
+            all.add(new ActivityLogResponse(
+                    "DEPT_LOAN_CREATED",
+                    "Đã tạo phiếu mượn khoa " + dl.getCode(),
+                    info,
+                    dl.getCreatedAt(),
+                    "DEPT_LOAN", dl.getId()));
+
+            if (dl.getStatus() == DepartmentLoanStatus.RETURNED && dl.getActualReturnDate() != null) {
+                all.add(new ActivityLogResponse(
+                        "DEPT_LOAN_RETURNED",
+                        "Đã ghi nhận trả phiếu mượn khoa " + dl.getCode(),
+                        info,
+                        toDateTime(dl.getActualReturnDate(), dl.getUpdatedAt()),
+                        "DEPT_LOAN", dl.getId()));
+            }
+            if (dl.getStatus() == DepartmentLoanStatus.CANCELLED) {
+                all.add(new ActivityLogResponse(
+                        "DEPT_LOAN_CANCELLED",
+                        "Đã hủy phiếu mượn khoa " + dl.getCode(),
+                        info,
+                        dl.getUpdatedAt(),
+                        "DEPT_LOAN", dl.getId()));
+            }
         }
 
         // --- Filter timestamp ---

@@ -3,17 +3,21 @@ import { useQuery } from '@tanstack/react-query';
 import { borrowApi } from '../../api/borrowApi';
 import { maintenanceApi } from '../../api/maintenanceApi';
 import { equipApi } from '../../api/equipApi';
+import { procurementApi } from '../../api/procurementApi';
 import {
   REPORT_META,
   BORROW_COLUMNS,
   MAINTENANCE_COLUMNS,
   INVENTORY_COLUMNS,
+  PROCUREMENT_COLUMNS,
   filterBorrows,
   filterMaintenance,
   sortInventory,
+  filterProcurement,
   borrowSummary,
   maintenanceSummary,
   inventorySummary,
+  procurementSummary,
   type ReportColumn,
   type ReportKey,
   type ReportSummary,
@@ -32,6 +36,7 @@ const REPORT_TABS: { key: ReportKey; label: string }[] = [
   { key: 'borrow', label: 'Mượn / trả' },
   { key: 'maintenance', label: 'Bảo trì' },
   { key: 'inventory', label: 'Tồn kho' },
+  { key: 'procurement', label: 'Mua sắm' },
 ];
 
 function toYmd(d: Date): string {
@@ -75,11 +80,17 @@ export default function ReportsPage() {
     queryFn: () => equipApi.getAll(),
     enabled: reportKey === 'inventory',
   });
+  const procurementsQ = useQuery({
+    queryKey: ['reports', 'procurements'],
+    queryFn: () => procurementApi.getAll(),
+    enabled: reportKey === 'procurement',
+  });
 
   const loading =
     (reportKey === 'borrow' && borrowsQ.isLoading) ||
     (reportKey === 'maintenance' && maintenanceQ.isLoading) ||
-    (reportKey === 'inventory' && equipsQ.isLoading);
+    (reportKey === 'inventory' && equipsQ.isLoading) ||
+    (reportKey === 'procurement' && procurementsQ.isLoading);
 
   const view: ReportView = useMemo(() => {
     const period: ReportPeriod = { from, to };
@@ -105,16 +116,27 @@ export default function ReportsPage() {
         exportExcel: () => exportReportExcel(REPORT_META.maintenance, MAINTENANCE_COLUMNS, rows, summary, period),
       };
     }
-    const rows = sortInventory(equipsQ.data ?? []);
-    const summary = inventorySummary(rows);
+    if (reportKey === 'inventory') {
+      const rows = sortInventory(equipsQ.data ?? []);
+      const summary = inventorySummary(rows);
+      return {
+        columns: INVENTORY_COLUMNS as ReportColumn<unknown>[],
+        rows,
+        summary,
+        exportPdf: () => printReportPDF(REPORT_META.inventory, INVENTORY_COLUMNS, rows, summary),
+        exportExcel: () => exportReportExcel(REPORT_META.inventory, INVENTORY_COLUMNS, rows, summary),
+      };
+    }
+    const rows = filterProcurement(procurementsQ.data ?? [], from, to);
+    const summary = procurementSummary(rows);
     return {
-      columns: INVENTORY_COLUMNS as ReportColumn<unknown>[],
+      columns: PROCUREMENT_COLUMNS as ReportColumn<unknown>[],
       rows,
       summary,
-      exportPdf: () => printReportPDF(REPORT_META.inventory, INVENTORY_COLUMNS, rows, summary),
-      exportExcel: () => exportReportExcel(REPORT_META.inventory, INVENTORY_COLUMNS, rows, summary),
+      exportPdf: () => printReportPDF(REPORT_META.procurement, PROCUREMENT_COLUMNS, rows, summary, period),
+      exportExcel: () => exportReportExcel(REPORT_META.procurement, PROCUREMENT_COLUMNS, rows, summary, period),
     };
-  }, [reportKey, from, to, borrowsQ.data, maintenanceQ.data, equipsQ.data]);
+  }, [reportKey, from, to, borrowsQ.data, maintenanceQ.data, equipsQ.data, procurementsQ.data]);
 
   const handleExport = (fn: () => void) => {
     if (loading) return;

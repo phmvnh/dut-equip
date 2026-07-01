@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { Equipment } from '../types/equipment';
 import { useAuthStore } from '../store/authStore';
 import { useToastStore } from '../store/toastStore';
 import { buildingApi, type BuildingResponse } from '../api/buildingApi';
 import { borrowApi, type PurposeType } from '../api/borrowApi';
+import { settingApi } from '../api/settingApi';
 import StatusPill from './StatusPill';
-import EquipmentScheduleList from './EquipmentScheduleList';
 
 interface Props {
   equipment: Equipment;
@@ -138,6 +139,18 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
   const user = useAuthStore((s) => s.user);
   const showToast = useToastStore((s) => s.show);
 
+  const { data: currentBorrower } = useQuery({
+    queryKey: ['equip-current-borrower', equipment.id],
+    queryFn: () => borrowApi.getCurrentBorrower(equipment.id),
+    enabled: equipment.status === 'BORROWED',
+  });
+
+  const { data: setting } = useQuery({
+    queryKey: ['settings'],
+    queryFn: settingApi.get,
+  });
+  const maxBorrowDays = setting?.maxBorrowDays ?? 7;
+
   const defaultBorrow = defaultBorrowDatetime();
   const defaultReturn = defaultReturnFromBorrow(defaultBorrow);
 
@@ -161,6 +174,7 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [limitReached, setLimitReached] = useState<string | null>(null);
+  const [overlapWarning, setOverlapWarning] = useState<string | null>(null);
 
   useEffect(() => {
     buildingApi.getAll()
@@ -191,7 +205,7 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
   }
 
   function maxReturnDatetime() {
-    return addDays(form.borrowDatetime, 7);
+    return addDays(form.borrowDatetime, maxBorrowDays);
   }
 
   function set<K extends keyof typeof form>(key: K, val: typeof form[K]) {
@@ -210,7 +224,7 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
     else if (form.borrowDatetime < nowDatetimeLocal()) e.borrowDatetime = 'Ngày mượn phải từ thời điểm hiện tại';
     if (!form.returnDatetime)      e.returnDatetime = 'Vui lòng chọn ngày giờ trả';
     else if (form.returnDatetime <= form.borrowDatetime) e.returnDatetime = 'Ngày trả phải sau ngày mượn';
-    else if (form.returnDatetime > maxReturnDatetime()) e.returnDatetime = 'Tối đa 7 ngày kể từ ngày mượn';
+    else if (form.returnDatetime > maxReturnDatetime()) e.returnDatetime = `Tối đa ${maxBorrowDays} ngày kể từ ngày mượn`;
     if (!form.purpose)             e.purpose = 'Vui lòng chọn mục đích sử dụng';
     if (form.purpose === 'OTHER' && !form.purposeNote.trim())
                                    e.purposeNote = 'Vui lòng ghi rõ mục đích';
@@ -218,11 +232,7 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
     return e;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-
+  async function submitForm(confirmedOverlap: boolean) {
     setSubmitting(true);
     try {
       await borrowApi.create({
@@ -235,14 +245,16 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
         purposeNote:    form.purpose === 'OTHER' ? form.purposeNote.trim() : undefined,
         note:           form.note.trim() || undefined,
         confirmed:      form.agreed,
+        confirmedOverlap,
       });
       onSuccess?.();
       setSubmitted(true);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      if (msg && (msg.startsWith('Bạn đang mượn tối đa')
+      if (msg?.startsWith('TRÙNG GIỜ:')) {
+        setOverlapWarning(msg.replace('TRÙNG GIỜ: ', ''));
+      } else if (msg && (msg.startsWith('Bạn đang mượn tối đa')
                || msg.startsWith('Bạn đã có một đơn mượn đang xử lý')
-               || msg.startsWith('Khung giờ này đã có người đặt')
                || msg.startsWith('Thiết bị đang quá hạn'))) {
         setLimitReached(msg);
       } else {
@@ -251,6 +263,51 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    await submitForm(false);
+  }
+
+  // Popup xác nhận trùng giờ — vẫn có thể đặt, admin sẽ quyết định
+  if (overlapWarning) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setOverlapWarning(null)}>
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+        <div
+          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center gap-5 text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+            <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">Khung giờ đã có người đặt</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">{overlapWarning}</p>
+          </div>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={() => setOverlapWarning(null)}
+              className="flex-1 h-10 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors"
+            >
+              Huỷ
+            </button>
+            <button
+              onClick={async () => { setOverlapWarning(null); await submitForm(true); }}
+              disabled={submitting}
+              className="flex-1 h-10 rounded-xl bg-blue-100 text-blue-700 border border-blue-300 text-sm font-semibold hover:bg-blue-200 disabled:opacity-60 transition-colors"
+            >
+              Vẫn gửi đơn
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Popup cảnh báo — hiện khi backend trả lỗi vượt giới hạn mượn hoặc trùng đơn cùng thiết bị
@@ -494,7 +551,30 @@ export default function BorrowFormModal({ equipment, onClose, onShowDetail, onSu
                       </div>
                     </Field>
                   </div>
-                  <EquipmentScheduleList equipmentId={equipment.id} />
+                  {currentBorrower && (
+                    <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
+                      <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <div className="text-xs text-amber-800 leading-relaxed">
+                        <span className="font-semibold">{currentBorrower.userName}</span>
+                        {' '}đang sử dụng thiết bị này
+                        {currentBorrower.userPhone && <span> · <span className="font-semibold">{currentBorrower.userPhone}</span></span>}
+                        {(currentBorrower.buildingName || currentBorrower.room) && (
+                          <span> · tại {[currentBorrower.buildingName, currentBorrower.room].filter(Boolean).join(' – ')}</span>
+                        )}
+                        <span className="block">
+                          Hạn trả:{' '}
+                          <span className="font-semibold">
+                            {new Date(currentBorrower.returnDateTime).toLocaleString('vi-VN', {
+                              day: '2-digit', month: '2-digit', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit',
+                            })}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <Field label="Mục đích sử dụng" required error={errors.purpose}>
                     <select
                       value={form.purpose}

@@ -65,7 +65,7 @@ export default function UsersPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
       closeForm();
-      toast(`Thêm giảng viên thành công. Mật khẩu mặc định: ${defaultPassword}`);
+      toast(`Thêm người dùng thành công. Mật khẩu mặc định: ${defaultPassword}`);
     },
     onError: (e: any) => {
       const msg = e.response?.data?.message ?? 'Có lỗi xảy ra';
@@ -183,14 +183,15 @@ export default function UsersPage() {
     e.preventDefault();
     if (!form.fullName.trim()) { setFormError('Họ tên không được để trống'); return; }
     if (!form.email.trim()) { setFormError('Email không được để trống'); return; }
-    if (mode === 'create' && !form.faculty.trim()) { setFormError('Khoa không được để trống'); return; }
+    if (mode === 'create' && form.role === 'USER' && !form.faculty.trim()) { setFormError('Khoa không được để trống'); return; }
 
     if (mode === 'create') {
       createMut.mutate({
         fullName: form.fullName.trim(),
         email: form.email.trim(),
-        faculty: form.faculty.trim(),
+        faculty: form.faculty.trim() || undefined,
         phone: form.phone.trim() || undefined,
+        role: form.role,
       });
     } else if (editingId !== null) {
       updateMut.mutate({
@@ -352,9 +353,21 @@ export default function UsersPage() {
                     style={{ border: '1px solid #e5e7eb' }}
                   />
                 </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Vai trò</label>
+                  <select
+                    value={form.role}
+                    onChange={set('role')}
+                    className="w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    style={{ border: '1px solid #e5e7eb' }}
+                  >
+                    <option value="USER">Giảng viên</option>
+                    <option value="ADMIN">Quản trị</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Khoa {mode === 'create' && <span className="text-red-500">*</span>}
+                    Khoa {mode === 'create' && form.role === 'USER' && <span className="text-red-500">*</span>}
                   </label>
                   <input
                     value={form.faculty}
@@ -374,20 +387,6 @@ export default function UsersPage() {
                     style={{ border: '1px solid #e5e7eb' }}
                   />
                 </div>
-                {mode === 'edit' && (
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Vai trò</label>
-                    <select
-                      value={form.role}
-                      onChange={set('role')}
-                      className="w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      style={{ border: '1px solid #e5e7eb' }}
-                    >
-                      <option value="USER">Giảng viên</option>
-                      <option value="ADMIN">Quản trị</option>
-                    </select>
-                  </div>
-                )}
               </div>
 
               {mode === 'create' && (

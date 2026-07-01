@@ -43,8 +43,13 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             "text/plain"
     );
 
-    private static final String CHAT_IMAGE_FOLDER = "dut_equip/chat_image";
-    private static final String CHAT_FILE_FOLDER  = "dut_equip/chat_file";
+    private static final String CHAT_IMAGE_FOLDER  = "dut_equip/chat_image";
+    private static final String CHAT_FILE_FOLDER   = "dut_equip/chat_file";
+    private static final String DEPT_LOAN_FOLDER   = "dut_equip/dept_loan";
+
+    private static final Set<String> ALLOWED_DEPT_LOAN_TYPES = Set.of(
+            "image/jpeg", "image/png", "image/webp", "application/pdf"
+    );
 
     private final Cloudinary cloudinary;
 
@@ -136,6 +141,37 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             return url;
         } catch (IOException e) {
             throw new BadRequestException("Upload ảnh thất bại: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public String uploadDeptLoanFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Vui lòng chọn file");
+        }
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
+        if (!ALLOWED_DEPT_LOAN_TYPES.contains(contentType)) {
+            throw new BadRequestException("Chỉ chấp nhận ảnh (JPG, PNG, WEBP) hoặc PDF");
+        }
+        if (file.getSize() > MAX_CHAT_FILE_BYTES) {
+            throw new BadRequestException("Kích thước file tối đa 20MB");
+        }
+        try {
+            boolean isImage = contentType.startsWith("image/");
+            Map<String, Object> options = new HashMap<>();
+            options.put("folder", DEPT_LOAN_FOLDER);
+            options.put("asset_folder", DEPT_LOAN_FOLDER);
+            options.put("resource_type", isImage ? "image" : "raw");
+            options.put("use_filename", true);
+            options.put("unique_filename", true);
+
+            @SuppressWarnings("rawtypes")
+            Map result = cloudinary.uploader().upload(file.getBytes(), options);
+            String url = (String) result.get("secure_url");
+            log.info("Upload dept-loan file thành công: {}", url);
+            return url;
+        } catch (IOException e) {
+            throw new BadRequestException("Upload file thất bại: " + e.getMessage());
         }
     }
 

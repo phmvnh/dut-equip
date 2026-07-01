@@ -75,14 +75,19 @@ def compute(feature: dict[str, Any], wbucket: dict[str, Any]) -> str:
         "type": feature.get("equip_type"),
         "status": feature.get("status"),
         "building_cat": feature.get("building_category"),
+        # Dùng số đếm thô (không bucket) vì mỗi lượt mượn thêm là sự kiện thật.
         "borrow_count": feature.get("borrow_count_since_window"),
         "borrow_hours": round(feature.get("total_borrow_hours_since_window") or 0),
         "maint_count": feature.get("maintenance_count_lifetime"),
+        # Dùng bucket thay vì ngày thực: 181 ngày → 182 ngày không đổi mức rủi ro,
+        # không cần tính lại. Chỉ đổi khi vượt mốc 180/365.
         "last_maint": _bucket_last_maint(feature.get("last_maintenance_days_ago")),
         "damage": feature.get("damage_reports_since_window"),
         "damage_sev": feature.get("max_damage_severity_rank") or 0,
         "warranty": _bucket_warranty(feature.get("warranty_remaining_days")),
         "age_bucket": (feature.get("age_days") or 0) // AGE_BUCKET_DAYS,
+        # window_basis thay đổi khi bảo trì mới hoàn tất (last_maintenance → mốc mới),
+        # buộc recompute ngay lần bảo trì đó dù các số khác chưa thay đổi.
         "window_basis": feature.get("window_basis"),
         "weather": wbucket,
     }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useChatStore } from '../../store/chatStore';
 import { chatApi } from '../../api/chatApi';
+import { userApi, type UserResponse } from '../../api/userApi';
 import ChatThread from '../../components/chat/ChatThread';
 
 function formatRelative(iso?: string): string {
@@ -36,6 +37,13 @@ export default function ChatPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Trạng thái nhắn tin mới
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [allUsers, setAllUsers] = useState<UserResponse[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [pendingUser, setPendingUser] = useState<UserResponse | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -57,6 +65,25 @@ export default function ChatPage() {
     return () => setActive(null);
   }, [setActive]);
 
+  // Tải danh sách user khi mở panel nhắn tin mới
+  useEffect(() => {
+    if (!showNewChat || allUsers.length > 0) return;
+    let cancelled = false;
+    setLoadingUsers(true);
+    userApi
+      .getAll()
+      .then((users) => {
+        if (!cancelled) setAllUsers(users.filter((u) => u.role === 'USER' && u.active));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingUsers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showNewChat, allUsers.length]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return conversations;
@@ -68,117 +95,254 @@ export default function ChatPage() {
     );
   }, [conversations, search]);
 
+  const filteredAllUsers = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return allUsers.slice(0, 40);
+    return allUsers.filter(
+      (u) =>
+        u.fullName.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q)
+    );
+  }, [allUsers, userSearch]);
+
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
   const active = conversations.find((c) => c.id === activeId);
+
+  function handleSelectUser(user: UserResponse) {
+    const existing = conversations.find((c) => c.userId === user.id);
+    if (existing) {
+      setActive(existing.id);
+    } else {
+      setActive(null);
+      setPendingUser(user);
+    }
+    setShowNewChat(false);
+    setUserSearch('');
+  }
+
+  async function handleConversationCreated(conversationId: number) {
+    try {
+      const list = await chatApi.listConversations();
+      setConversations(list);
+    } catch {
+      // giữ nguyên danh sách cũ
+    }
+    setPendingUser(null);
+    setActive(conversationId);
+  }
 
   return (
     <div className="h-[calc(100vh-7rem)] flex bg-white rounded-2xl border border-blue-100 shadow-[0_8px_30px_-12px_rgba(37,99,235,0.18)] overflow-hidden">
       {/* Cột danh sách */}
       <div className="w-80 border-r border-blue-100 flex flex-col bg-gradient-to-b from-blue-50/70 to-white">
-        {/* Header danh sách */}
-        <div className="px-4 pt-4 pb-3 border-b border-blue-100">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">Hộp tin nhắn</h2>
-              <p className="text-[11px] text-gray-500 mt-0.5">
-                {conversations.length} cuộc trò chuyện
-                {totalUnread > 0 && (
-                  <span className="ml-1.5 text-blue-600 font-medium">· {totalUnread} chưa đọc</span>
-                )}
-              </p>
-            </div>
-          </div>
-          <div className="relative">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-blue-400 absolute left-3 top-1/2 -translate-y-1/2">
-              <circle cx="11" cy="11" r="7" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm giảng viên..."
-              className="w-full h-9 pl-9 pr-3 rounded-full border border-blue-200 bg-white text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Danh sách */}
-        <div className="flex-1 overflow-y-auto p-2">
-          {loading && conversations.length === 0 ? (
-            <p className="text-center text-sm text-gray-400 py-8">Đang tải...</p>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-6 h-6 text-blue-400">
+        {showNewChat ? (
+          /* Panel nhắn tin mới */
+          <>
+            <div className="px-3 pt-3 pb-2.5 border-b border-blue-100">
+              <div className="flex items-center gap-2 mb-2.5">
+                <button
+                  type="button"
+                  onClick={() => { setShowNewChat(false); setUserSearch(''); }}
+                  className="w-8 h-8 rounded-lg text-gray-500 hover:bg-blue-50 flex items-center justify-center transition-colors"
+                  title="Quay lại"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                </button>
+                <h3 className="text-sm font-semibold text-gray-800">Nhắn tin mới</h3>
+              </div>
+              <div className="relative">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-blue-400 absolute left-3 top-1/2 -translate-y-1/2">
                   <circle cx="11" cy="11" r="7" />
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
+                <input
+                  type="text"
+                  value={userSearch}
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
+                  autoFocus
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Tìm tên hoặc email..."
+                  className="w-full h-9 pl-9 pr-3 rounded-full border border-blue-200 bg-white text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                />
               </div>
-              <p className="text-sm text-gray-500">
-                {search ? 'Không tìm thấy giảng viên' : 'Chưa có cuộc trò chuyện'}
-              </p>
             </div>
-          ) : (
-            filtered.map((c) => {
-              const selected = c.id === activeId;
-              const hasUnread = c.unreadCount > 0;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setActive(c.id)}
-                  className={`w-full text-left px-3 py-2.5 flex items-start gap-3 rounded-xl mb-1 transition-all border ${
-                    selected
-                      ? 'bg-blue-50 border-blue-400 shadow-sm'
-                      : 'border-transparent hover:bg-white hover:shadow-sm hover:border-blue-100'
-                  }`}
-                >
-                  <div className="relative flex-shrink-0">
-                    <div className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-                      {c.userAvatarUrl ? (
-                        <img src={c.userAvatarUrl} alt={c.userFullName} className="w-full h-full object-cover" />
-                      ) : (
-                        getInitials(c.userFullName)
-                      )}
-                    </div>
-                    {hasUnread && (
-                      <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-red-500 ring-2 ring-white" />
-                    )}
+            <div className="flex-1 overflow-y-auto p-2">
+              {loadingUsers ? (
+                <p className="text-center text-sm text-gray-400 py-8">Đang tải...</p>
+              ) : filteredAllUsers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-6 h-6 text-blue-400">
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className={`text-sm truncate ${
-                        selected ? 'text-blue-700 font-semibold' : hasUnread ? 'text-gray-900 font-semibold' : 'text-gray-900 font-medium'
-                      }`}>
-                        {c.userFullName}
-                      </p>
-                      <span className={`text-[10px] flex-shrink-0 ${
-                        selected ? 'text-blue-500' : 'text-gray-400'
-                      }`}>
-                        {formatRelative(c.lastMessageAt)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 mt-0.5">
-                      <p className={`text-xs truncate ${
-                        hasUnread ? 'text-gray-800 font-medium' : 'text-gray-500'
-                      }`}>
-                        {previewText(c.lastMessageContent, c.lastMessageType) || (
-                          <span className="italic opacity-70">Chưa có tin nhắn</span>
-                        )}
-                      </p>
-                      {hasUnread && (
-                        <span className="min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold flex items-center justify-center flex-shrink-0 bg-red-500 text-white">
-                          {c.unreadCount > 99 ? '99+' : c.unreadCount}
+                  <p className="text-sm text-gray-500">
+                    {userSearch ? 'Không tìm thấy người dùng' : 'Chưa có người dùng'}
+                  </p>
+                </div>
+              ) : (
+                filteredAllUsers.map((user) => {
+                  const existingConv = conversations.find((c) => c.userId === user.id);
+                  return (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => handleSelectUser(user)}
+                      className="w-full text-left px-3 py-2.5 flex items-center gap-3 rounded-xl mb-1 transition-all border border-transparent hover:bg-white hover:shadow-sm hover:border-blue-100"
+                    >
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                        {getInitials(user.fullName)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{user.fullName}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                      </div>
+                      {existingConv ? (
+                        <span className="text-[10px] text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                          Đã có
                         </span>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-gray-300 flex-shrink-0">
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
                       )}
-                    </div>
-                  </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </>
+        ) : (
+          /* Panel danh sách hội thoại */
+          <>
+            <div className="px-4 pt-4 pb-3 border-b border-blue-100">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900">Hộp tin nhắn</h2>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    {conversations.length} cuộc trò chuyện
+                    {totalUnread > 0 && (
+                      <span className="ml-1.5 text-blue-600 font-medium">· {totalUnread} chưa đọc</span>
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewChat(true)}
+                  title="Nhắn tin mới"
+                  className="w-9 h-9 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center transition-colors shadow-sm"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
                 </button>
-              );
-            })
-          )}
-        </div>
+              </div>
+              <div className="relative">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-blue-400 absolute left-3 top-1/2 -translate-y-1/2">
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Tìm hội thoại..."
+                  className="w-full h-9 pl-9 pr-3 rounded-full border border-blue-200 bg-white text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2">
+              {loading && conversations.length === 0 ? (
+                <p className="text-center text-sm text-gray-400 py-8">Đang tải...</p>
+              ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-6 h-6 text-blue-400">
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {search ? 'Không tìm thấy hội thoại' : 'Chưa có cuộc trò chuyện'}
+                  </p>
+                  {!search && (
+                    <button
+                      type="button"
+                      onClick={() => setShowNewChat(true)}
+                      className="mt-3 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Bắt đầu nhắn tin mới
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filtered.map((c) => {
+                  const selected = c.id === activeId;
+                  const hasUnread = c.unreadCount > 0;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => { setPendingUser(null); setActive(c.id); }}
+                      className={`w-full text-left px-3 py-2.5 flex items-start gap-3 rounded-xl mb-1 transition-all border ${
+                        selected
+                          ? 'bg-blue-50 border-blue-400 shadow-sm'
+                          : 'border-transparent hover:bg-white hover:shadow-sm hover:border-blue-100'
+                      }`}
+                    >
+                      <div className="relative flex-shrink-0">
+                        <div className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                          {c.userAvatarUrl ? (
+                            <img src={c.userAvatarUrl} alt={c.userFullName} className="w-full h-full object-cover" />
+                          ) : (
+                            getInitials(c.userFullName)
+                          )}
+                        </div>
+                        {hasUnread && (
+                          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-red-500 ring-2 ring-white" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`text-sm truncate ${
+                            selected ? 'text-blue-700 font-semibold' : hasUnread ? 'text-gray-900 font-semibold' : 'text-gray-900 font-medium'
+                          }`}>
+                            {c.userFullName}
+                          </p>
+                          <span className={`text-[10px] flex-shrink-0 ${
+                            selected ? 'text-blue-500' : 'text-gray-400'
+                          }`}>
+                            {formatRelative(c.lastMessageAt)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <p className={`text-xs truncate ${
+                            hasUnread ? 'text-gray-800 font-medium' : 'text-gray-500'
+                          }`}>
+                            {previewText(c.lastMessageContent, c.lastMessageType) || (
+                              <span className="italic opacity-70">Chưa có tin nhắn</span>
+                            )}
+                          </p>
+                          {hasUnread && (
+                            <span className="min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold flex items-center justify-center flex-shrink-0 bg-red-500 text-white">
+                              {c.unreadCount > 99 ? '99+' : c.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Cột chat */}
@@ -219,6 +383,39 @@ export default function ChatPage() {
               <ChatThread conversationId={active.id} targetUserId={active.userId} />
             </div>
           </>
+        ) : pendingUser ? (
+          <>
+            <div className="h-16 px-5 flex items-center gap-3 border-b border-blue-100 bg-white">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                {getInitials(pendingUser.fullName)}
+              </div>
+              <div className="leading-tight flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">{pendingUser.fullName}</p>
+                <p className="text-[11px] text-gray-500 truncate">
+                  {pendingUser.faculty ? `${pendingUser.faculty} · ` : ''}{pendingUser.email}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingUser(null)}
+                className="w-9 h-9 rounded-lg text-gray-400 hover:bg-blue-400 hover:text-blue-600 flex items-center justify-center transition-colors"
+                title="Đóng"
+                aria-label="Đóng"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ChatThread
+                conversationId={-pendingUser.id}
+                targetUserId={pendingUser.id}
+                onConversationCreated={handleConversationCreated}
+              />
+            </div>
+          </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6 bg-gradient-to-b from-blue-50/40 to-white">
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-100 flex items-center justify-center mb-4 shadow-sm">
@@ -227,7 +424,18 @@ export default function ChatPage() {
               </svg>
             </div>
             <p className="text-base font-semibold text-gray-700">Chọn một cuộc trò chuyện</p>
-            <p className="text-sm text-gray-500 mt-1">Chọn giảng viên ở danh sách bên trái để bắt đầu hỗ trợ</p>
+            <p className="text-sm text-gray-500 mt-1">Chọn hội thoại ở danh sách bên trái hoặc nhắn tin mới</p>
+            <button
+              type="button"
+              onClick={() => setShowNewChat(true)}
+              className="mt-4 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Nhắn tin mới
+            </button>
           </div>
         )}
       </div>

@@ -16,13 +16,9 @@ export interface EquipCreatePayload {
   specifications?: string;
   description?: string;
   purchasePrice?: number;
-  warrantyUntil?: string; // YYYY-MM-DD
-}
-
-export interface DisposePayload {
-  reason: string;
-  disposalDate: string; // YYYY-MM-DD
-  value?: number;
+  warrantyUntil?: string;    // YYYY-MM-DD
+  usefulLifeYears?: number;  // khấu hao đường thẳng
+  acquisitionDate?: string;  // YYYY-MM-DD — ngày đưa vào sử dụng
 }
 
 export const equipApi = {
@@ -75,7 +71,4 @@ export const equipApi = {
 
   show: (id: number) =>
     axiosClient.post<Equipment>(`/equips/${id}/show`).then((r) => r.data),
-
-  dispose: (id: number, data: DisposePayload) =>
-    axiosClient.post<Equipment>(`/equips/${id}/dispose`, data).then((r) => r.data),
 };

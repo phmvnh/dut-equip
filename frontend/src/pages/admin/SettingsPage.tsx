@@ -89,7 +89,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Số thiết bị đồng thời</label>
+              <label className="block text-sm font-medium mb-1.5">Số đơn đồng thời</label>
               <input
                 type="number"
                 min={1}

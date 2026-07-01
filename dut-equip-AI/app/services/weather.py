@@ -19,7 +19,8 @@ _EMPTY_PERIOD = {"temp_avg": None, "humidity_avg": None, "rain_total_mm": None}
 
 
 def _summarize_forecast(items: list[dict]) -> dict:
-    next_7d = items[:56]  # 56 mốc x 3h = 7 ngày
+    # OpenWeather forecast trả về mốc mỗi 3 giờ → 56 mốc = 56×3 = 168 giờ = 7 ngày.
+    next_7d = items[:56]
     if not next_7d:
         return {**_EMPTY_PERIOD, "condition_summary": "unknown"}
 
@@ -95,6 +96,7 @@ def _fetch_openweather_dust() -> dict:
 
 
 def _agg_avg(values: list, hours: int) -> float | None:
+    # Lấy `hours` phần tử cuối (mới nhất) vì Open-Meteo trả theo thứ tự thời gian tăng dần.
     sub = [v for v in values[-hours:] if v is not None]
     return round(sum(sub) / len(sub), 1) if sub else None
 
@@ -161,6 +163,8 @@ def get_hourly_series() -> dict:
                     "latitude": settings.WEATHER_LAT,
                     "longitude": settings.WEATHER_LON,
                     "hourly": "temperature_2m,relative_humidity_2m,precipitation",
+                    # 90 ngày khớp với AI_HISTORY_DAYS tối đa của data_collector
+                    # để luôn có dữ liệu giờ cho mọi lượt mượn trong cửa sổ thống kê.
                     "past_days": 90,
                     "forecast_days": 1,
                     "timezone": "Asia/Ho_Chi_Minh",

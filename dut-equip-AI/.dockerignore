@@ -1,0 +1,9 @@
+.venv/
+**/__pycache__/
+*.pyc
+.git/
+logs/
+.env
+.env.lan
+README.md
+run_daily_ai.bat

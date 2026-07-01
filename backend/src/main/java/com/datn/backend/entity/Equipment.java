@@ -71,6 +71,12 @@ public class Equipment {
     // Hạn bảo hành (có thể null)
     private LocalDate warrantyUntil;
 
+    // Thời gian sử dụng hữu ích (năm) — dùng để tính khấu hao đường thẳng
+    private Integer usefulLifeYears;
+
+    // Ngày đưa vào sử dụng — làm gốc tính khấu hao (khác ngày nhập hệ thống)
+    private LocalDate acquisitionDate;
+
     // Ẩn khỏi HomePage (user không thấy) — Admin có thể bật/tắt bất kỳ lúc nào.
     // Khác với status: hidden là cờ orthogonal, không thay đổi vòng đời thiết bị.
     @Column(nullable = false)
@@ -189,6 +195,22 @@ public class Equipment {
 
     public void setWarrantyUntil(LocalDate warrantyUntil) {
         this.warrantyUntil = warrantyUntil;
+    }
+
+    public Integer getUsefulLifeYears() {
+        return usefulLifeYears;
+    }
+
+    public void setUsefulLifeYears(Integer usefulLifeYears) {
+        this.usefulLifeYears = usefulLifeYears;
+    }
+
+    public LocalDate getAcquisitionDate() {
+        return acquisitionDate;
+    }
+
+    public void setAcquisitionDate(LocalDate acquisitionDate) {
+        this.acquisitionDate = acquisitionDate;
     }
 
     public boolean isHidden() {

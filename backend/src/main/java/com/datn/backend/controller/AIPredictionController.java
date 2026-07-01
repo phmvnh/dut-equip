@@ -40,4 +40,10 @@ public class AIPredictionController {
     public ResponseEntity<Map<String, String>> runNow() {
         return ResponseEntity.ok(service.triggerRun());
     }
+
+    // GET /api/v1/admin/ai/jobs/latest — kiểm tra job AI gần nhất
+    @GetMapping("/jobs/latest")
+    public ResponseEntity<Map<String, Object>> latestJob() {
+        return ResponseEntity.ok(service.latestJob());
+    }
 }

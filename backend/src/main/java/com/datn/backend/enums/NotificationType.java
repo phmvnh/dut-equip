@@ -26,5 +26,17 @@ public enum NotificationType {
     COMPENSATION_CONFIRMED,           // Gửi USER khi admin xác nhận đã nhận tiền
     COMPENSATION_PROOF_SUBMITTED,     // Gửi ADMIN khi giảng viên nộp minh chứng đã bồi thường
     COMPENSATION_COMPLAINT_RECEIVED,  // Gửi ADMIN khi user khiếu nại
-    COMPENSATION_COMPLAINT_RESOLVED   // Gửi USER khi admin xử lý khiếu nại
+    COMPENSATION_COMPLAINT_RESOLVED,  // Gửi USER khi admin xử lý khiếu nại
+
+    // Liên quan đến mua sắm — gửi cho ADMIN
+    PROCUREMENT_SUBMITTED,   // Lập đề nghị mua sắm mới (chờ duyệt)
+    PROCUREMENT_APPROVED,    // Đề nghị mua sắm đã được duyệt (ghi nhận quyết định)
+    PROCUREMENT_REJECTED,    // Đề nghị mua sắm bị từ chối
+    PROCUREMENT_COMPLETED,   // Đã nghiệm thu, nhập kho → sinh thiết bị
+
+    // Liên quan đến thanh lý — gửi cho ADMIN
+    DISPOSAL_SUBMITTED,      // Lập đề nghị thanh lý mới (chờ duyệt)
+    DISPOSAL_APPROVED,       // Đề nghị thanh lý đã được duyệt (ghi nhận quyết định)
+    DISPOSAL_REJECTED,       // Đề nghị thanh lý bị từ chối
+    DISPOSAL_COMPLETED       // Đã thực hiện thanh lý → thiết bị ghi giảm (DISPOSED)
 }

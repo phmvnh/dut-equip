@@ -4,6 +4,7 @@
 import type { BorrowResponse } from '../api/borrowApi';
 import type { MaintenanceLog } from '../types/maintenance';
 import type { Equipment } from '../types/equipment';
+import type { Procurement } from '../types/procurement';
 import { statusConfig } from './statusConfig';
 
 // ===== Kiểu cột chung =====
@@ -13,6 +14,8 @@ export interface ReportColumn<T> {
   value: (row: T) => string | number;
   // gợi ý canh phải cho cột số/tiền (PDF)
   numeric?: boolean;
+  // tổng cột — nhận toàn bộ rows, trả chuỗi hiển thị ở dòng "Tổng cộng" cuối bảng PDF
+  total?: (rows: T[]) => string | number;
 }
 
 export interface ReportSummary {
@@ -20,7 +23,7 @@ export interface ReportSummary {
   value: string;
 }
 
-export type ReportKey = 'borrow' | 'maintenance' | 'inventory';
+export type ReportKey = 'borrow' | 'maintenance' | 'inventory' | 'procurement';
 
 export interface ReportMeta {
   key: ReportKey;
@@ -32,6 +35,7 @@ export const REPORT_META: Record<ReportKey, ReportMeta> = {
   borrow:      { key: 'borrow',      title: 'Báo cáo mượn / trả thiết bị', fileName: 'bao-cao-muon-tra' },
   maintenance: { key: 'maintenance', title: 'Báo cáo bảo trì thiết bị',    fileName: 'bao-cao-bao-tri' },
   inventory:   { key: 'inventory',   title: 'Báo cáo tồn kho thiết bị',     fileName: 'bao-cao-ton-kho' },
+  procurement: { key: 'procurement', title: 'Báo cáo mua sắm thiết bị',    fileName: 'bao-cao-mua-sam' },
 };
 
 // ===== Nhãn tiếng Việt =====
@@ -46,6 +50,14 @@ const BORROW_STATUS_VN: Record<string, string> = {
 
 const MAINTENANCE_STATUS_VN: Record<string, string> = {
   IN_PROGRESS: 'Đang xử lý',
+  COMPLETED: 'Hoàn thành',
+  CANCELLED: 'Đã hủy',
+};
+
+const PROCUREMENT_STATUS_VN: Record<string, string> = {
+  PENDING: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  REJECTED: 'Từ chối',
   COMPLETED: 'Hoàn thành',
   CANCELLED: 'Đã hủy',
 };
@@ -105,7 +117,12 @@ export const MAINTENANCE_COLUMNS: ReportColumn<MaintenanceLog>[] = [
   { header: 'Kỹ thuật viên', value: (m) => m.technicianName ?? '—' },
   { header: 'Bắt đầu', value: (m) => fmtDate(m.startDate) },
   { header: 'Kết thúc', value: (m) => fmtDate(m.endDate) },
-  { header: 'Chi phí', value: (m) => fmtMoney(m.cost), numeric: true },
+  {
+    header: 'Chi phí',
+    value: (m) => fmtMoney(m.cost),
+    numeric: true,
+    total: (rows) => fmtMoney(rows.reduce((s, m) => s + (m.cost ?? 0), 0)),
+  },
   { header: 'Trạng thái', value: (m) => MAINTENANCE_STATUS_VN[m.status] ?? m.status },
 ];
 
@@ -115,8 +132,30 @@ export const INVENTORY_COLUMNS: ReportColumn<Equipment>[] = [
   { header: 'Loại', value: (e) => e.equipTypeName },
   { header: 'Khu', value: (e) => e.buildingName },
   { header: 'Trạng thái', value: (e) => statusConfig[e.status]?.label ?? e.status },
-  { header: 'Giá mua', value: (e) => fmtMoney(e.purchasePrice), numeric: true },
+  { header: 'Nguyên giá', value: (e) => fmtMoney(e.purchasePrice), numeric: true,
+    total: (rows) => fmtMoney(rows.reduce((s, e) => s + (e.purchasePrice ?? 0), 0)) },
+  { header: 'Ngày SD', value: (e) => fmtDate(e.acquisitionDate) },
+  { header: 'KH/năm', value: (e) => fmtMoney(e.annualDepreciation), numeric: true },
+  { header: 'Giá trị còn lại', value: (e) => fmtMoney(e.currentBookValue), numeric: true,
+    total: (rows) => fmtMoney(rows.reduce((s, e) => s + (e.currentBookValue ?? 0), 0)) },
   { header: 'Bảo hành đến', value: (e) => fmtDate(e.warrantyUntil) },
+];
+
+export const PROCUREMENT_COLUMNS: ReportColumn<Procurement>[] = [
+  { header: 'Mã đề nghị', value: (p) => p.code },
+  { header: 'Tiêu đề', value: (p) => p.title },
+  { header: 'Người đề nghị', value: (p) => p.requestedByName },
+  { header: 'Nhà cung cấp', value: (p) => p.supplier ?? '—' },
+  { header: 'Số mặt hàng', value: (p) => p.totalItems, numeric: true },
+  { header: 'Tổng số lượng', value: (p) => p.totalQuantity, numeric: true },
+  {
+    header: 'Giá trị dự kiến',
+    value: (p) => fmtMoney(p.estimatedTotal),
+    numeric: true,
+    total: (rows) => fmtMoney(rows.reduce((s, p) => s + (p.estimatedTotal ?? 0), 0)),
+  },
+  { header: 'Trạng thái', value: (p) => PROCUREMENT_STATUS_VN[p.status] ?? p.status },
+  { header: 'Ngày tạo', value: (p) => fmtDate(p.createdAt) },
 ];
 
 // ===== Lọc dữ liệu theo kỳ =====
@@ -137,6 +176,12 @@ export function sortInventory(equips: Equipment[]): Equipment[] {
   return equips
     .filter((e) => e.status !== 'DISPOSED')
     .sort((a, b) => a.code.localeCompare(b.code));
+}
+
+export function filterProcurement(items: Procurement[], from: string, to: string): Procurement[] {
+  return items
+    .filter((p) => inRange(p.createdAt, from, to))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 // ===== Dòng tổng kết =====
@@ -170,5 +215,15 @@ export function inventorySummary(rows: Equipment[]): ReportSummary[] {
     { label: 'Sẵn sàng', value: String(count('AVAILABLE')) },
     { label: 'Đang mượn', value: String(count('BORROWED')) },
     { label: 'Bảo trì / Hỏng', value: String(count('MAINTENANCE') + count('BROKEN')) },
+  ];
+}
+
+export function procurementSummary(rows: Procurement[]): ReportSummary[] {
+  const completed = rows.filter((p) => p.status === 'COMPLETED').length;
+  const totalValue = rows.reduce((s, p) => s + (p.estimatedTotal ?? 0), 0);
+  return [
+    { label: 'Tổng số đề nghị', value: String(rows.length) },
+    { label: 'Đã hoàn thành', value: String(completed) },
+    { label: 'Tổng giá trị dự kiến', value: fmtMoney(totalValue) },
   ];
 }

@@ -24,6 +24,9 @@ import AdminNotificationsPage from '../pages/admin/NotificationsPage';
 import ChatPage from '../pages/admin/ChatPage';
 import ActivityLogsPage from '../pages/admin/ActivityLogsPage';
 import ReportsPage from '../pages/admin/ReportsPage';
+import InventoryPage from '../pages/admin/InventoryPage';
+import ProcurementPage from '../pages/admin/ProcurementPage';
+import DisposalsPage from '../pages/admin/DisposalsPage';
 import NotificationsPage from '../pages/user/NotificationsPage';
 import AdminGuard from './AdminGuard';
 import AuthGuard from './AuthGuard';
@@ -99,6 +102,8 @@ export default function AppRouter() {
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="equipments" element={<EquipmentsPage />} />
+          <Route path="procurements" element={<ProcurementPage />} />
+          <Route path="disposals" element={<DisposalsPage />} />
           <Route path="borrow" element={<BorrowPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
           <Route path="compensations" element={<CompensationsPage />} />
@@ -111,6 +116,7 @@ export default function AppRouter() {
           <Route path="chat" element={<ChatPage />} />
           <Route path="activity-logs" element={<ActivityLogsPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

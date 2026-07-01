@@ -102,6 +102,13 @@ const ICONS = {
       <circle cx="17" cy="14" r="1.5" />
     </svg>
   ),
+  inventory: (
+    <svg className={ICON_CLASS} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+      <rect x="9" y="3" width="6" height="4" rx="1" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
   search: (
     <svg className="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -119,13 +126,29 @@ const ICONS = {
       <line x1="8" y1="13" x2="8" y2="17" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="16" y1="15" x2="16" y2="17" />
     </svg>
   ),
+  cart: (
+    <svg className={ICON_CLASS} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+    </svg>
+  ),
+  trash: (
+    <svg className={ICON_CLASS} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  ),
 };
 
 const NAV_ITEMS: NavItem[] = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: ICONS.grid },
   { path: '/admin/equipments', label: 'Thiết bị', icon: ICONS.monitor },
+  { path: '/admin/procurements', label: 'Mua sắm', icon: ICONS.cart },
   { path: '/admin/borrow', label: 'Đơn mượn', icon: ICONS.clipboard },
   { path: '/admin/maintenance', label: 'Bảo trì', icon: ICONS.wrench },
+  { path: '/admin/inventory', label: 'Kiểm kê', icon: ICONS.inventory },
+  { path: '/admin/disposals', label: 'Thanh lý', icon: ICONS.trash },
   { path: '/admin/compensations', label: 'Bồi thường', icon: ICONS.wallet },
   { path: '/admin/users', label: 'Người dùng', icon: ICONS.users },
   { path: '/admin/equip-types', label: 'Loại thiết bị', icon: ICONS.list },
@@ -133,12 +156,12 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/admin/chat', label: 'Tin nhắn', icon: ICONS.chat },
   { path: '/admin/activity-logs', label: 'Lịch sử hoạt động', icon: ICONS.history },
   { path: '/admin/reports', label: 'Báo cáo', icon: ICONS.report },
-  { path: '/admin/profile', label: 'Thông tin cá nhân', icon: ICONS.profile },
-  { path: '/admin/settings', label: 'Cài đặt', icon: ICONS.settings },
 ];
 
 function getSearchPlaceholder(pathname: string): string {
   if (pathname.startsWith('/admin/equipments'))    return 'Tìm theo tên hoặc mã thiết bị...';
+  if (pathname.startsWith('/admin/procurements'))  return 'Tìm theo mã, tiêu đề hoặc người lập...';
+  if (pathname.startsWith('/admin/disposals'))     return 'Tìm theo mã đề nghị hoặc thiết bị...';
   if (pathname.startsWith('/admin/borrow'))        return 'Tìm theo người mượn hoặc thiết bị...';
   if (pathname.startsWith('/admin/maintenance'))   return 'Tìm theo thiết bị hoặc người bảo trì...';
   if (pathname.startsWith('/admin/compensations')) return 'Tìm theo mã phiếu, giảng viên hoặc thiết bị...';
@@ -154,6 +177,10 @@ function getTopbarMeta(pathname: string, navigate: (p: string) => void): TopbarM
     return { title: 'Tổng quan' };
   if (pathname.startsWith('/admin/equipments'))
     return { title: 'Quản lý thiết bị', action: { label: '+ Thêm thiết bị', onClick: () => navigate('/admin/equipments?action=add') } };
+  if (pathname.startsWith('/admin/procurements'))
+    return { title: 'Quản lý mua sắm', action: { label: '+ Tạo đề nghị mua sắm', onClick: () => navigate('/admin/procurements?action=add') } };
+  if (pathname.startsWith('/admin/disposals'))
+    return { title: 'Quản lý thanh lý' };
   if (pathname.startsWith('/admin/borrow'))
     return { title: 'Quản lý đơn mượn' };
   if (pathname.startsWith('/admin/maintenance'))
@@ -161,7 +188,7 @@ function getTopbarMeta(pathname: string, navigate: (p: string) => void): TopbarM
   if (pathname.startsWith('/admin/compensations'))
     return { title: 'Quản lý bồi thường' };
   if (pathname.startsWith('/admin/users'))
-    return { title: 'Quản lý người dùng', action: { label: '+ Thêm giảng viên', onClick: () => navigate('/admin/users?action=add') } };
+    return { title: 'Quản lý người dùng', action: { label: '+ Thêm người dùng', onClick: () => navigate('/admin/users?action=add') } };
   if (pathname.startsWith('/admin/equip-types'))
     return { title: 'Loại thiết bị', action: { label: '+ Thêm loại', onClick: () => navigate('/admin/equip-types?action=add') } };
   if (pathname.startsWith('/admin/buildings'))
@@ -176,6 +203,8 @@ function getTopbarMeta(pathname: string, navigate: (p: string) => void): TopbarM
     return { title: 'Lịch sử hoạt động' };
   if (pathname.startsWith('/admin/reports'))
     return { title: 'Báo cáo thống kê' };
+  if (pathname.startsWith('/admin/inventory'))
+    return { title: 'Kiểm kê tài sản' };
   void navigate;
   return { title: 'Quản trị' };
 }
@@ -192,12 +221,17 @@ export default function AdminPage() {
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState('');
   const [bellOpen, setBellOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
+  const avatarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
         setBellOpen(false);
+      }
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setAvatarOpen(false);
       }
     }
     document.addEventListener('mousedown', onClickOutside);
@@ -277,16 +311,6 @@ export default function AdminPage() {
           })}
         </nav>
 
-        <div className="p-2 border-t border-white/10">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/75 hover:bg-white/10"
-            title={collapsed ? 'Đăng xuất' : undefined}
-          >
-            {ICONS.logout}
-            {!collapsed && <span>Đăng xuất</span>}
-          </button>
-        </div>
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -352,24 +376,86 @@ export default function AdminPage() {
                 />
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/profile')}
-              className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-sm font-semibold text-white hover:opacity-80 transition-opacity"
-              style={{ backgroundColor: '#2563eb' }}
-              title="Thông tin cá nhân"
-            >
-              {adminUser?.avatarUrl ? (
-                <img src={adminUser.avatarUrl} alt={adminUser.fullName} className="w-full h-full object-cover" />
-              ) : adminUser?.fullName ? (
-                (() => {
-                  const parts = adminUser.fullName.trim().split(/\s+/);
-                  return parts.length === 1
-                    ? parts[0].slice(0, 2).toUpperCase()
-                    : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-                })()
-              ) : 'QV'}
-            </button>
+            <div className="relative" ref={avatarRef}>
+              <button
+                type="button"
+                onClick={() => setAvatarOpen((v) => !v)}
+                className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-sm font-semibold text-white hover:opacity-80 transition-opacity ring-2 ring-transparent hover:ring-blue-300"
+                style={{ backgroundColor: '#2563eb' }}
+                title="Tài khoản"
+              >
+                {adminUser?.avatarUrl ? (
+                  <img src={adminUser.avatarUrl} alt={adminUser.fullName} className="w-full h-full object-cover" />
+                ) : adminUser?.fullName ? (
+                  (() => {
+                    const parts = adminUser.fullName.trim().split(/\s+/);
+                    return parts.length === 1
+                      ? parts[0].slice(0, 2).toUpperCase()
+                      : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                  })()
+                ) : 'QV'}
+              </button>
+
+              {avatarOpen && (
+                <div
+                  className="absolute right-0 top-11 z-50 w-60 rounded-xl bg-white py-1.5 shadow-xl"
+                  style={{ border: '1px solid #e5e7eb' }}
+                >
+                  {/* Header thông tin user */}
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 overflow-hidden"
+                        style={{ backgroundColor: '#2563eb' }}
+                      >
+                        {adminUser?.avatarUrl ? (
+                          <img src={adminUser.avatarUrl} alt={adminUser.fullName} className="w-full h-full object-cover" />
+                        ) : adminUser?.fullName ? (
+                          (() => {
+                            const parts = adminUser.fullName.trim().split(/\s+/);
+                            return parts.length === 1
+                              ? parts[0].slice(0, 2).toUpperCase()
+                              : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                          })()
+                        ) : 'QV'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{adminUser?.fullName ?? 'Quản trị viên'}</p>
+                        <p className="text-xs text-gray-500 truncate">{adminUser?.email ?? ''}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Menu items */}
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setAvatarOpen(false); navigate('/admin/profile'); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      {ICONS.profile}
+                      <span>Thông tin cá nhân</span>
+                    </button>
+                    <button
+                      onClick={() => { setAvatarOpen(false); navigate('/admin/settings'); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      {ICONS.settings}
+                      <span>Cài đặt hệ thống</span>
+                    </button>
+                  </div>
+
+                  <div className="border-t border-gray-100 py-1">
+                    <button
+                      onClick={() => { setAvatarOpen(false); handleLogout(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      {ICONS.logout}
+                      <span>Đăng xuất</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

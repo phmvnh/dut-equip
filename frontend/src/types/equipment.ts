@@ -22,6 +22,10 @@ export interface Equipment {
   images?: EquipmentImage[];
   purchasePrice?: number;
   warrantyUntil?: string; // YYYY-MM-DD
+  usefulLifeYears?: number;
+  acquisitionDate?: string; // YYYY-MM-DD
+  annualDepreciation?: number;
+  currentBookValue?: number;
   // Cờ ẩn khỏi HomePage — orthogonal với status, Admin set qua nút Ẩn/Hiện
   hidden?: boolean;
   // Thông tin thanh lý — chỉ có khi status = DISPOSED

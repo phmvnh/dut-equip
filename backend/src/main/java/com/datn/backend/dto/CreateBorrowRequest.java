@@ -38,6 +38,9 @@ public class CreateBorrowRequest {
     @AssertTrue(message = "Vui lòng xác nhận cam kết sử dụng thiết bị")
     private Boolean confirmed;
 
+    // true khi user đã thấy cảnh báo trùng giờ và xác nhận muốn đặt tiếp
+    private boolean confirmedOverlap;
+
     public Long getEquipmentId() { return equipmentId; }
     public void setEquipmentId(Long equipmentId) { this.equipmentId = equipmentId; }
 
@@ -64,4 +67,7 @@ public class CreateBorrowRequest {
 
     public Boolean getConfirmed() { return confirmed; }
     public void setConfirmed(Boolean confirmed) { this.confirmed = confirmed; }
+
+    public boolean isConfirmedOverlap() { return confirmedOverlap; }
+    public void setConfirmedOverlap(boolean confirmedOverlap) { this.confirmedOverlap = confirmedOverlap; }
 }

@@ -20,6 +20,7 @@ export interface CreateBorrowRequest {
   purposeNote?: string;
   note?: string;
   confirmed: boolean;
+  confirmedOverlap?: boolean;
 }
 
 export interface ReportDamageRequest {
@@ -60,6 +61,15 @@ export interface BorrowResponse {
   damageDescription?: string;
   damageImageUrls?: string[];
   damageReportedAt?: string;
+}
+
+// Thông tin người đang mượn — để người khác biết và liên hệ khi cần
+export interface CurrentBorrowerInfo {
+  userName: string;
+  userPhone?: string;
+  buildingName?: string;
+  room?: string;
+  returnDateTime: string;
 }
 
 // Khung giờ đã đặt của 1 thiết bị — không kèm thông tin người mượn (privacy)
@@ -108,6 +118,12 @@ export const borrowApi = {
     axiosClient
       .get<BorrowResponse | ''>(`/borrows/active-by-equipment/${equipmentId}`)
       .then((r) => (r.status === 204 || !r.data ? null : (r.data as BorrowResponse))),
+
+  // Mọi user đăng nhập — ai đang mượn thiết bị (chỉ tên + phòng + hạn trả, không kèm PII)
+  getCurrentBorrower: (equipmentId: number): Promise<CurrentBorrowerInfo | null> =>
+    axiosClient
+      .get<CurrentBorrowerInfo | ''>(`/borrows/current-borrower/${equipmentId}`)
+      .then((r) => (r.status === 204 || !r.data ? null : (r.data as CurrentBorrowerInfo))),
 
   // Mọi user đăng nhập — các khung giờ đã đặt (PENDING/APPROVED/OVERDUE) của thiết bị
   getScheduleByEquipment: (equipmentId: number): Promise<EquipmentScheduleSlot[]> =>

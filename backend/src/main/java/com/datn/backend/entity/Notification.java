@@ -39,9 +39,10 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
 
-    // Loại notification — xem NotificationType enum cho danh sách đầy đủ
+    // Loại notification — xem NotificationType enum cho danh sách đầy đủ.
+    // Dùng VARCHAR (không phải ENUM gốc MySQL) để thêm loại mới không phải ALTER bảng.
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
     private NotificationType type;
 
     // Đã đọc chưa

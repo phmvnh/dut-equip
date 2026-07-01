@@ -210,6 +210,7 @@ DATN/
 
 ## 10. Liên kết hữu ích
 
+- **Production**: https://dutequip.io.vn
 - Backend Swagger: http://localhost:8080/swagger-ui.html
 - AI Service Swagger: http://localhost:8000/docs
 - Frontend dev: http://localhost:5173

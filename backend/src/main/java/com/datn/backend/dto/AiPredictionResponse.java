@@ -15,6 +15,7 @@ public class AiPredictionResponse {
     private String reason;
     private String lastMaintenanceText;  // VD: "90 ngày trước"
     private LocalDateTime generatedAt;
+    private Long generatedAtEpochMillis;
 
     public Long getEquipmentId() { return equipmentId; }
     public void setEquipmentId(Long v) { this.equipmentId = v; }
@@ -40,4 +41,6 @@ public class AiPredictionResponse {
     public void setLastMaintenanceText(String v) { this.lastMaintenanceText = v; }
     public LocalDateTime getGeneratedAt() { return generatedAt; }
     public void setGeneratedAt(LocalDateTime v) { this.generatedAt = v; }
+    public Long getGeneratedAtEpochMillis() { return generatedAtEpochMillis; }
+    public void setGeneratedAtEpochMillis(Long v) { this.generatedAtEpochMillis = v; }
 }

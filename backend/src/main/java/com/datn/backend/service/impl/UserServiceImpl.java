@@ -58,13 +58,20 @@ public class UserServiceImpl implements UserService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email đã được sử dụng");
         }
+        UserRole role = UserRole.USER;
+        if ("ADMIN".equalsIgnoreCase(request.getRole())) {
+            role = UserRole.ADMIN;
+        }
+        if (role == UserRole.USER && (request.getFaculty() == null || request.getFaculty().isBlank())) {
+            throw new BadRequestException("Khoa không được để trống");
+        }
         User user = new User();
         user.setFullName(request.getFullName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(settingService.get().getDefaultPassword()));
         user.setFaculty(request.getFaculty());
         user.setPhone(request.getPhone());
-        user.setRole(UserRole.USER);
+        user.setRole(role);
         return UserResponse.fromUser(userRepository.save(user));
     }
 

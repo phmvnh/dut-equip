@@ -25,19 +25,19 @@ import {
   type TrendMode,
 } from '../../api/dashboardApi';
 import type { ActivityLogItem, ActivityType } from '../../types/activityLog';
-import { aiApi, type AiPrediction, type RiskLevel } from '../../api/aiApi';
+import { aiApi, type AiJobSummary, type AiPrediction, type RiskLevel } from '../../api/aiApi';
 import { useToastStore } from '../../store/toastStore';
 import MaintenanceFormModal from '../../components/MaintenanceFormModal';
 
 // ============ Static config ============
 
 const PURPOSE_META: Record<PurposeKey, { label: string; color: string }> = {
-  TEACHING:        { label: 'Giảng dạy',  color: '#2563eb' },
-  PRACTICE:        { label: 'Thực hành',  color: '#16a34a' },
-  RESEARCH:        { label: 'Nghiên cứu', color: '#ea580c' },
-  CONFERENCE:      { label: 'Hội nghị',   color: '#9333ea' },
-  EXTRACURRICULAR: { label: 'Ngoại khóa', color: '#0891b2' },
-  OTHER:           { label: 'Khác',       color: '#6b7280' },
+  TEACHING:        { label: 'Giảng dạy',  color: '#6366f1' },
+  PRACTICE:        { label: 'Thực hành',  color: '#22d3ee' },
+  RESEARCH:        { label: 'Nghiên cứu', color: '#f59e0b' },
+  CONFERENCE:      { label: 'Hội nghị',   color: '#f472b6' },
+  EXTRACURRICULAR: { label: 'Ngoại khóa', color: '#34d399' },
+  OTHER:           { label: 'Khác',       color: '#94a3b8' },
 };
 
 const ACTIVITY_META: Record<ActivityType, { label: string; color: string }> = {
@@ -54,6 +54,14 @@ const ACTIVITY_META: Record<ActivityType, { label: string; color: string }> = {
   EQUIPMENT_ADDED:         { label: 'Thêm thiết bị',     color: '#2563eb' },
   EQUIPMENT_DISPOSED:      { label: 'Thanh lý',          color: '#6b7280' },
   USER_CREATED:            { label: 'Thêm giảng viên',   color: '#0891b2' },
+  PROCUREMENT_CREATED:     { label: 'Lập đề nghị mua sắm',  color: '#2563eb' },
+  PROCUREMENT_APPROVED:    { label: 'Duyệt mua sắm',        color: '#16a34a' },
+  PROCUREMENT_COMPLETED:   { label: 'Nghiệm thu mua sắm',   color: '#16a34a' },
+  PROCUREMENT_REJECTED:    { label: 'Từ chối mua sắm',      color: '#b91c1c' },
+  DISPOSAL_CREATED:        { label: 'Lập đề nghị thanh lý', color: '#6b7280' },
+  DISPOSAL_APPROVED:       { label: 'Duyệt thanh lý',       color: '#16a34a' },
+  DISPOSAL_COMPLETED:      { label: 'Hoàn tất thanh lý',    color: '#6b7280' },
+  DISPOSAL_REJECTED:       { label: 'Từ chối thanh lý',     color: '#b91c1c' },
 };
 
 const TREND_MODE_META: Record<TrendMode, { btnLabel: string; unit: string; xInterval: number | 'preserveStartEnd' }> = {
@@ -134,6 +142,12 @@ function formatRelative(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString('vi-VN');
 }
 
+function getPredictionTimestampMs(prediction: AiPrediction): number {
+  if (typeof prediction.generatedAtEpochMillis === 'number') return prediction.generatedAtEpochMillis;
+  const parsed = new Date(prediction.generatedAt).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 const cardStyle: React.CSSProperties = {
   borderRadius: 16,
   border: '1px solid rgba(0,0,0,0.04)',
@@ -170,10 +184,12 @@ export default function DashboardPage() {
     queryFn: () => dashboardApi.getRecentActivities(10),
   });
 
-  // Mốc thời gian lúc bấm "Phân tích ngay". Khi != null → bật polling 2s.
-  // Khi data có generatedAt > mốc này → tắt polling.
+  // Khi != null → bật polling 2s. Tắt polling khi job vừa bấm chuyển sang trạng thái
+  // kết thúc — nhận diện bằng run_id đổi khác (không dùng mốc thời gian client/server
+  // vì 2 đồng hồ lệch nhau, job xong dưới 1s sẽ có finished_at < lúc client ghi nhận pollSince).
   const [pollSince, setPollSince] = useState<number | null>(null);
   const pollTimeoutRef = useRef<number | null>(null);
+  const prevJobRunIdRef = useRef<string | null>(null);
 
   // Modal chi tiết khi click vào 1 dòng AI prediction
   const [selectedAi, setSelectedAi] = useState<AiPrediction | null>(null);
@@ -186,21 +202,42 @@ export default function DashboardPage() {
     refetchInterval: pollSince ? 2000 : false,
   });
 
+  const aiJobQ = useQuery<AiJobSummary>({
+    queryKey: ['ai', 'jobs', 'latest'],
+    queryFn: () => aiApi.getLatestJob(),
+    refetchInterval: pollSince ? 2000 : false,
+  });
+
   const showToast = useToastStore((s) => s.show);
 
-  // Phát hiện dữ liệu mới so với mốc polling
+  // Phát hiện job vừa bấm đã kết thúc — so run_id với lượt trước khi bấm, không so thời gian.
   useEffect(() => {
-    if (!pollSince || !aiQ.data || aiQ.data.length === 0) return;
-    const latest = Math.max(...aiQ.data.map((p) => new Date(p.generatedAt).getTime()));
-    if (latest > pollSince) {
+    if (!pollSince || !aiJobQ.data?.run_id) return;
+    if (aiJobQ.data.run_id === prevJobRunIdRef.current) return; // vẫn là job cũ, job mới chưa kịp ghi/refetch
+    if (aiJobQ.data.status === 'RUNNING') return; // job mới đã bắt đầu, đợi xong
+
+    const stopPolling = () => {
       setPollSince(null);
       if (pollTimeoutRef.current) {
         window.clearTimeout(pollTimeoutRef.current);
         pollTimeoutRef.current = null;
       }
-      showToast('AI đã cập nhật dự đoán mới', 'success');
+    };
+
+    if (aiJobQ.data.status === 'FAILED' || aiJobQ.data.status === 'PARTIAL') {
+      stopPolling();
+      showToast(aiJobQ.data.error_message || 'Lần phân tích này gặp lỗi — kiểm tra log AI service', 'error');
+      return;
     }
-  }, [aiQ.data, pollSince, showToast]);
+    if (aiJobQ.data.status !== 'DONE') return;
+
+    stopPolling();
+    if (aiJobQ.data.n_llm && aiJobQ.data.n_llm > 0) {
+      showToast('AI đã cập nhật dự đoán mới', 'success');
+    } else {
+      showToast('Lần chạy này không có dữ liệu mới để gửi lên Gemini', 'info');
+    }
+  }, [aiJobQ.data, pollSince, showToast]);
 
   // Cleanup timeout khi unmount
   useEffect(() => {
@@ -211,6 +248,10 @@ export default function DashboardPage() {
 
   const aiRun = useMutation({
     mutationFn: () => aiApi.runNow(),
+    onMutate: () => {
+      // Chốt run_id hiện tại TRƯỚC khi gọi /run, để phân biệt job mới với job cũ.
+      prevJobRunIdRef.current = aiJobQ.data?.run_id ?? null;
+    },
     onSuccess: (resp) => {
       if (resp.status === 'started' || resp.status === 'busy') {
         const since = Date.now();
@@ -455,11 +496,6 @@ export default function DashboardPage() {
           >
             AI gợi ý
           </span>
-          {aiQ.data && aiQ.data.length > 0 && (
-            <span className="text-[10px] text-gray-400">
-              Cập nhật: {formatRelative(aiQ.data[0].generatedAt)}
-            </span>
-          )}
           {pollSince && (
             <span className="text-[10px] text-blue-600 font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />

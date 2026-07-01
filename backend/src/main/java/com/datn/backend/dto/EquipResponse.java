@@ -1,6 +1,7 @@
 package com.datn.backend.dto;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -27,6 +28,11 @@ public class EquipResponse {
     private List<ImageInfo> images = Collections.emptyList();
     private BigDecimal purchasePrice;
     private LocalDate warrantyUntil;
+    private Integer usefulLifeYears;
+    private LocalDate acquisitionDate;
+    // Khấu hao đường thẳng — tính khi trả dữ liệu ra API, không lưu DB
+    private BigDecimal annualDepreciation;
+    private BigDecimal currentBookValue;
     private boolean hidden;
     private String disposalReason;
     private LocalDate disposalDate;
@@ -57,8 +63,12 @@ public class EquipResponse {
         dto.specifications = e.getSpecifications();
         dto.description   = e.getDescription();
         dto.mainImageUrl  = e.getMainImageUrl();
-        dto.purchasePrice = e.getPurchasePrice();
-        dto.warrantyUntil = e.getWarrantyUntil();
+        dto.purchasePrice    = e.getPurchasePrice();
+        dto.warrantyUntil    = e.getWarrantyUntil();
+        dto.usefulLifeYears  = e.getUsefulLifeYears();
+        dto.acquisitionDate  = e.getAcquisitionDate();
+        dto.annualDepreciation = computeAnnualDepreciation(e);
+        dto.currentBookValue   = computeCurrentBookValue(e);
         dto.hidden         = e.isHidden();
         dto.disposalReason = e.getDisposalReason();
         dto.disposalDate   = e.getDisposalDate();
@@ -70,6 +80,29 @@ public class EquipResponse {
                 ? Collections.emptyList()
                 : images.stream().map(ImageInfo::from).collect(Collectors.toList());
         return dto;
+    }
+
+    // Mỗi năm khấu hao = nguyên giá / số năm sử dụng hữu ích
+    private static BigDecimal computeAnnualDepreciation(Equipment e) {
+        if (e.getPurchasePrice() == null || e.getUsefulLifeYears() == null || e.getUsefulLifeYears() <= 0) {
+            return null;
+        }
+        return e.getPurchasePrice().divide(BigDecimal.valueOf(e.getUsefulLifeYears()), 0, RoundingMode.HALF_UP);
+    }
+
+    // Giá trị còn lại = nguyên giá - khấu hao đã dùng, không cho âm
+    private static BigDecimal computeCurrentBookValue(Equipment e) {
+        if (e.getPurchasePrice() == null || e.getUsefulLifeYears() == null || e.getUsefulLifeYears() <= 0
+                || e.getAcquisitionDate() == null) {
+            return null;
+        }
+        long yearsUsed = java.time.temporal.ChronoUnit.YEARS.between(e.getAcquisitionDate(), LocalDate.now());
+        if (yearsUsed < 0) yearsUsed = 0;
+        BigDecimal annual = computeAnnualDepreciation(e);
+        if (annual == null) return null;
+        BigDecimal depreciated = annual.multiply(BigDecimal.valueOf(yearsUsed));
+        BigDecimal remaining = e.getPurchasePrice().subtract(depreciated);
+        return remaining.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : remaining;
     }
 
     public List<ImageInfo> getImages() { return images; }
@@ -102,6 +135,10 @@ public class EquipResponse {
     public String getMainImageUrl() { return mainImageUrl; }
     public BigDecimal getPurchasePrice() { return purchasePrice; }
     public LocalDate getWarrantyUntil() { return warrantyUntil; }
+    public Integer getUsefulLifeYears() { return usefulLifeYears; }
+    public LocalDate getAcquisitionDate() { return acquisitionDate; }
+    public BigDecimal getAnnualDepreciation() { return annualDepreciation; }
+    public BigDecimal getCurrentBookValue() { return currentBookValue; }
     public boolean isHidden() { return hidden; }
     public String getDisposalReason() { return disposalReason; }
     public LocalDate getDisposalDate() { return disposalDate; }

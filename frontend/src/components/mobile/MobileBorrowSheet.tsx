@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { Equipment } from '../../types/equipment';
 import { useAuthStore } from '../../store/authStore';
 import { useToastStore } from '../../store/toastStore';
 import { buildingApi, type BuildingResponse } from '../../api/buildingApi';
 import { borrowApi, type PurposeType } from '../../api/borrowApi';
+import { settingApi } from '../../api/settingApi';
 import {
   BORROW_TIME_SLOTS,
   RETURN_TIME_SLOTS,
@@ -16,7 +18,6 @@ import {
   todayDateStr,
 } from '../../utils/borrowTime';
 import MobileSheet from './MobileSheet';
-import EquipmentScheduleList from '../EquipmentScheduleList';
 
 interface Props {
   equipment: Equipment;
@@ -52,6 +53,18 @@ export default function MobileBorrowSheet({ equipment, onClose, onSuccess }: Pro
   const user = useAuthStore((s) => s.user);
   const showToast = useToastStore((s) => s.show);
 
+  const { data: currentBorrower } = useQuery({
+    queryKey: ['equip-current-borrower', equipment.id],
+    queryFn: () => borrowApi.getCurrentBorrower(equipment.id),
+    enabled: equipment.status === 'BORROWED',
+  });
+
+  const { data: setting } = useQuery({
+    queryKey: ['settings'],
+    queryFn: settingApi.get,
+  });
+  const maxBorrowDays = setting?.maxBorrowDays ?? 7;
+
   const defaultBorrow = defaultBorrowDatetime();
   const [buildings, setBuildings] = useState<BuildingResponse[]>([]);
   const [form, setForm] = useState({
@@ -67,6 +80,7 @@ export default function MobileBorrowSheet({ equipment, onClose, onSuccess }: Pro
   const [errors, setErrors] = useState<Partial<Record<keyof typeof form | 'submit', string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [limitReached, setLimitReached] = useState<string | null>(null);
+  const [overlapWarning, setOverlapWarning] = useState<string | null>(null);
 
   useEffect(() => {
     buildingApi.getAll()
@@ -79,7 +93,7 @@ export default function MobileBorrowSheet({ equipment, onClose, onSuccess }: Pro
     setErrors((e) => ({ ...e, [key]: undefined }));
   }
 
-  const maxReturnDatetime = () => addDays(form.borrowDatetime, 7);
+  const maxReturnDatetime = () => addDays(form.borrowDatetime, maxBorrowDays);
 
   function validate() {
     const e: typeof errors = {};
@@ -89,20 +103,14 @@ export default function MobileBorrowSheet({ equipment, onClose, onSuccess }: Pro
     else if (form.borrowDatetime < nowDatetimeLocal()) e.borrowDatetime = 'Ngày mượn phải từ thời điểm hiện tại';
     if (!form.returnDatetime) e.returnDatetime = 'Vui lòng chọn ngày giờ trả';
     else if (form.returnDatetime <= form.borrowDatetime) e.returnDatetime = 'Ngày trả phải sau ngày mượn';
-    else if (form.returnDatetime > maxReturnDatetime()) e.returnDatetime = 'Tối đa 7 ngày kể từ ngày mượn';
+    else if (form.returnDatetime > maxReturnDatetime()) e.returnDatetime = `Tối đa ${maxBorrowDays} ngày kể từ ngày mượn`;
     if (!form.purpose) e.purpose = 'Vui lòng chọn mục đích sử dụng';
     if (form.purpose === 'OTHER' && !form.purposeNote.trim()) e.purposeNote = 'Vui lòng ghi rõ mục đích';
     if (!form.agreed) e.agreed = 'Vui lòng xác nhận cam kết trước khi gửi';
     return e;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
-    }
+  async function submitForm(confirmedOverlap: boolean) {
     setSubmitting(true);
     try {
       await borrowApi.create({
@@ -115,14 +123,16 @@ export default function MobileBorrowSheet({ equipment, onClose, onSuccess }: Pro
         purposeNote: form.purpose === 'OTHER' ? form.purposeNote.trim() : undefined,
         note: form.note.trim() || undefined,
         confirmed: form.agreed,
+        confirmedOverlap,
       });
       onSuccess?.();
-      // Đóng sheet ngay rồi báo bằng toast — toast được mount ở trang chủ mobile
       onClose();
       showToast('Đã gửi đơn mượn — chờ Admin duyệt', 'success');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      if (msg && (msg.startsWith('Bạn đang mượn tối đa') || msg.startsWith('Bạn đã có một đơn mượn đang xử lý'))) {
+      if (msg?.startsWith('TRÙNG GIỜ:')) {
+        setOverlapWarning(msg.replace('TRÙNG GIỜ: ', ''));
+      } else if (msg && (msg.startsWith('Bạn đang mượn tối đa') || msg.startsWith('Bạn đã có một đơn mượn đang xử lý'))) {
         setLimitReached(msg);
       } else {
         setErrors({ submit: msg || 'Gửi đơn thất bại. Vui lòng thử lại.' });
@@ -130,6 +140,50 @@ export default function MobileBorrowSheet({ equipment, onClose, onSuccess }: Pro
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+    await submitForm(false);
+  }
+
+  // Xác nhận trùng giờ với đơn chờ duyệt — admin sẽ quyết định ai được mượn
+  if (overlapWarning) {
+    return (
+      <MobileSheet onClose={() => setOverlapWarning(null)}>
+        <div className="px-6 py-10 flex flex-col items-center text-center gap-5">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center bg-amber-100">
+            <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">Khung giờ đã có người đặt</h3>
+            <p className="text-sm text-gray-500 leading-relaxed">{overlapWarning}</p>
+          </div>
+          <div className="flex flex-col gap-2.5 w-full mt-2">
+            <button
+              onClick={async () => { setOverlapWarning(null); await submitForm(true); }}
+              disabled={submitting}
+              className="w-full h-12 rounded-full bg-action text-white text-[15px] font-semibold active:bg-action-press transition disabled:opacity-60"
+            >
+              Vẫn gửi đơn
+            </button>
+            <button
+              onClick={() => setOverlapWarning(null)}
+              className="w-full h-12 rounded-full bg-gray-100 text-gray-700 text-[15px] font-semibold active:bg-gray-200"
+            >
+              Huỷ
+            </button>
+          </div>
+        </div>
+      </MobileSheet>
+    );
   }
 
   // Chạm giới hạn mượn — báo ngay trong sheet kèm nút xác nhận (thành công thì dùng toast)
@@ -274,7 +328,30 @@ export default function MobileBorrowSheet({ equipment, onClose, onSuccess }: Pro
             {errors.returnDatetime && <p className="mt-1 text-xs text-red-500">{errors.returnDatetime}</p>}
           </div>
 
-          <EquipmentScheduleList equipmentId={equipment.id} />
+          {currentBorrower && (
+            <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-3.5 py-3">
+              <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <div className="text-xs text-amber-800 leading-relaxed">
+                <span className="font-semibold">{currentBorrower.userName}</span>
+                {' '}đang sử dụng thiết bị này
+                {currentBorrower.userPhone && <span> · <span className="font-semibold">{currentBorrower.userPhone}</span></span>}
+                {(currentBorrower.buildingName || currentBorrower.room) && (
+                  <span> · tại {[currentBorrower.buildingName, currentBorrower.room].filter(Boolean).join(' – ')}</span>
+                )}
+                <span className="block">
+                  Hạn trả:{' '}
+                  <span className="font-semibold">
+                    {new Date(currentBorrower.returnDateTime).toLocaleString('vi-VN', {
+                      day: '2-digit', month: '2-digit', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </span>
+                </span>
+              </div>
+            </div>
+          )}
 
           <div>
             <Label required>Mục đích sử dụng</Label>

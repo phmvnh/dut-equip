@@ -93,17 +93,6 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("Không tìm thấy tài khoản"));
 
-        String newEmail = request.getEmail().trim();
-        if (!newEmail.equalsIgnoreCase(user.getEmail())) {
-            if (!newEmail.endsWith("@dut.udn.vn")) {
-                throw new BadRequestException("Chỉ chấp nhận email có định dạng @dut.udn.vn");
-            }
-            if (userRepository.existsByEmail(newEmail)) {
-                throw new BadRequestException("Email đã được sử dụng");
-            }
-            user.setEmail(newEmail);
-        }
-
         user.setFullName(request.getFullName());
         user.setFaculty(request.getFaculty());
         user.setPhone(request.getPhone());

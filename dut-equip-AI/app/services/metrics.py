@@ -55,6 +55,9 @@ def compute(db: Session, positive: str = "high_or_fail", since_days: int | None 
     for risk_level, will_fail, label, source in rows:
         pred_pos = _predicted_positive(risk_level, will_fail, positive)
         actual_pos = (label == 1)
+        # Ma trận nhầm lẫn theo 1 dòng:
+        #   pred=T, actual=T → tp  |  pred=T, actual=F → fp
+        #   pred=F, actual=T → fn  |  pred=F, actual=F → tn
         cell = ("tp" if actual_pos else "fp") if pred_pos else ("fn" if actual_pos else "tn")
         overall[cell] += 1
         src = by_source.setdefault(source or "?", {"tp": 0, "fp": 0, "fn": 0, "tn": 0})

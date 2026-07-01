@@ -32,22 +32,25 @@ def heuristic_score(f: dict[str, Any]) -> int:
     elif sev == 1:      # LIGHT
         s += 30
     elif (f.get("damage_reports_since_window") or 0) > 0:  # có báo hỏng nhưng không rõ mức
+        # Thiếu severity → giả định MEDIUM cho an toàn (thận trọng hơn là bỏ qua).
         s += 40
 
     # Quá lịch bảo trì (hoặc chưa từng bảo trì mà đã cũ).
     lm = f.get("last_maintenance_days_ago")
     if lm is None:
+        # Chưa từng bảo trì: chỉ tính rủi ro nếu đã đủ cũ (không phạt thiết bị mới nhập).
         if (f.get("age_days") or 0) > STALE_MAINTENANCE_DAYS:
             s += 25
     elif lm > STALE_MAINTENANCE_DAYS:
         s += 25
 
-    # Hết bảo hành.
+    # Hết bảo hành: +10 vì chi phí sửa/thay tự chi, không được nhà sản xuất hỗ trợ.
     wr = f.get("warranty_remaining_days")
     if wr is not None and wr < 0:
         s += 10
 
     # Cường độ sử dụng chuẩn hoá theo cửa sổ (lượt/tháng).
+    # Chia cho window_days rồi nhân 30 để so sánh công bằng giữa cửa sổ ngắn/dài.
     wd = f.get("window_days") or 0
     bc = f.get("borrow_count_since_window") or 0
     if wd > 0:
@@ -63,11 +66,13 @@ def heuristic_score(f: dict[str, Any]) -> int:
         s += 5
 
     # Phơi nhiễm ẩm CAO khi sử dụng × môi trường xưởng (hiệu ứng B×C cộng dồn).
+    # Xưởng + ẩm cao → rủi ro ăn mòn cao hơn so với phòng học + ẩm cao.
     use_hum = f.get("use_humidity_avg")
     if use_hum is not None:
         if is_workshop and use_hum >= settings.AI_HUMIDITY_HIGH:
             s += 10
         elif use_hum >= settings.AI_HUMIDITY_HIGH + 5:
+            # Ẩm rất cao (vượt ngưỡng +5) ngay cả ở phòng học cũng đáng lo.
             s += 5
 
     return min(100, s)
@@ -79,6 +84,8 @@ def clearly_low(f: dict[str, Any], score: int) -> bool:
     return (
         score < LOW_SCORE_THRESHOLD
         and (f.get("damage_reports_since_window") or 0) == 0
+        # Chỉ cho qua khi trạng thái bình thường; UNDER_MAINTENANCE/BROKEN
+        # là tín hiệu rõ ràng → cần LLM đánh giá, không thể tự gán LOW.
         and f.get("status") in ("AVAILABLE", "BORROWED")
     )
 

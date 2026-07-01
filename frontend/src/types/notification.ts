@@ -16,7 +16,15 @@ export type NotificationType =
   | 'COMPENSATION_CONFIRMED'
   | 'COMPENSATION_PROOF_SUBMITTED'
   | 'COMPENSATION_COMPLAINT_RECEIVED'
-  | 'COMPENSATION_COMPLAINT_RESOLVED';
+  | 'COMPENSATION_COMPLAINT_RESOLVED'
+  | 'PROCUREMENT_SUBMITTED'
+  | 'PROCUREMENT_APPROVED'
+  | 'PROCUREMENT_REJECTED'
+  | 'PROCUREMENT_COMPLETED'
+  | 'DISPOSAL_SUBMITTED'
+  | 'DISPOSAL_APPROVED'
+  | 'DISPOSAL_REJECTED'
+  | 'DISPOSAL_COMPLETED';
 
 export interface NotificationItem {
   id: number;
@@ -57,5 +65,13 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   COMPENSATION_PROOF_SUBMITTED:    'Minh chứng bồi thường',
   COMPENSATION_COMPLAINT_RECEIVED: 'Khiếu nại bồi thường',
   COMPENSATION_COMPLAINT_RESOLVED: 'Xử lý khiếu nại',
+  PROCUREMENT_SUBMITTED: 'Đề nghị mua sắm mới',
+  PROCUREMENT_APPROVED:  'Duyệt đề nghị mua sắm',
+  PROCUREMENT_REJECTED:  'Từ chối đề nghị mua sắm',
+  PROCUREMENT_COMPLETED: 'Nghiệm thu mua sắm',
+  DISPOSAL_SUBMITTED:    'Đề nghị thanh lý mới',
+  DISPOSAL_APPROVED:     'Duyệt đề nghị thanh lý',
+  DISPOSAL_REJECTED:     'Từ chối đề nghị thanh lý',
+  DISPOSAL_COMPLETED:    'Hoàn tất thanh lý',
 };
 

@@ -14,8 +14,9 @@ export interface UserResponse {
 export interface CreateUserPayload {
   fullName: string;
   email: string;
-  faculty: string;
+  faculty?: string;
   phone?: string;
+  role?: 'USER' | 'ADMIN';
 }
 
 export interface UpdateUserPayload {

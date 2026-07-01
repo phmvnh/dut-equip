@@ -21,7 +21,7 @@ const FEATURES = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    title: 'Đặt mượn trực tuyến 24/7',
+    title: 'Đặt mượn trực tuyến',
     desc: 'Giảng viên đặt mượn thiết bị mọi lúc, mọi nơi',
   },
   {
@@ -325,7 +325,7 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Tab switcher — góc dưới phải */}
+          {/* Tab switcher — góc dưới phải
           <div className="absolute bottom-4 right-5 flex items-center gap-1 text-xs">
             <button
               onClick={() => switchTab('login')}
@@ -344,7 +344,7 @@ export default function LoginPage() {
             >
               Đăng ký
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

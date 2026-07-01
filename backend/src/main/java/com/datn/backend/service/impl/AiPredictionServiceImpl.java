@@ -1,6 +1,7 @@
 package com.datn.backend.service.impl;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
@@ -75,6 +76,23 @@ public class AiPredictionServiceImpl implements AiPredictionService {
         }
     }
 
+    @Override
+    public Map<String, Object> latestJob() {
+        try {
+            Map<String, Object> body = aiClient.get()
+                    .uri("/jobs/latest")
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (req, res) -> {
+                        throw new RestClientException("AI service trả " + res.getStatusCode());
+                    })
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+            return body == null ? Map.of("status", "none") : body;
+        } catch (RestClientException e) {
+            log.error("Không đọc được AI job mới nhất: {}", e.getMessage());
+            return Map.of("status", "error", "message", e.getMessage());
+        }
+    }
+
     private AiPredictionResponse toResponse(AiPrediction p) {
         AiPredictionResponse r = new AiPredictionResponse();
         Equipment eq = p.getEquipment();
@@ -96,6 +114,9 @@ public class AiPredictionServiceImpl implements AiPredictionService {
         r.setWillFailIn7d(p.isWillFailIn7d());
         r.setReason(p.getReason());
         r.setGeneratedAt(p.getGeneratedAt());
+        if (p.getGeneratedAt() != null) {
+            r.setGeneratedAtEpochMillis(p.getGeneratedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+        }
         r.setLastMaintenanceText(formatLastMaintenance(p.getEquipmentId()));
         return r;
     }

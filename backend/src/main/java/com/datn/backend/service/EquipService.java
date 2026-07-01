@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
-import com.datn.backend.dto.DisposeRequest;
 import com.datn.backend.dto.EquipRequest;
 import com.datn.backend.dto.EquipResponse;
 
@@ -34,7 +33,4 @@ public interface EquipService {
 
     // Ẩn/Hiện thiết bị khỏi HomePage (cờ orthogonal với status)
     EquipResponse setHidden(Long id, boolean hidden);
-
-    // Thanh lý thiết bị — chuyển status sang DISPOSED, lưu lý do/ngày/giá trị thu hồi
-    EquipResponse dispose(Long id, DisposeRequest request);
 }

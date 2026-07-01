@@ -1,0 +1,10 @@
+target/
+.git/
+.github/
+.mvn/
+mvnw
+mvnw.cmd
+HELP.md
+README.md
+# KHÔNG đưa secret local vào image — trên server dùng biến môi trường
+**/application-local.properties

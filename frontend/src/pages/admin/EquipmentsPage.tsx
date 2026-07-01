@@ -43,6 +43,8 @@ const EMPTY_FORM: EquipCreatePayload = {
   description: '',
   purchasePrice: undefined,
   warrantyUntil: '',
+  usefulLifeYears: undefined,
+  acquisitionDate: '',
 };
 
 const inputCls = 'w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white';
@@ -180,14 +182,16 @@ export default function EquipmentsPage() {
   async function openEditModal(eq: Equipment) {
     setEditingId(eq.id);
     setForm({
-      code:           eq.code,
-      name:           eq.name,
-      equipTypeId:    eq.equipTypeId,
-      buildingId:     eq.buildingId,
-      specifications: eq.specifications ?? '',
-      description:    eq.description ?? '',
-      purchasePrice:  eq.purchasePrice,
-      warrantyUntil:  eq.warrantyUntil ?? '',
+      code:            eq.code,
+      name:            eq.name,
+      equipTypeId:     eq.equipTypeId,
+      buildingId:      eq.buildingId,
+      specifications:  eq.specifications ?? '',
+      description:     eq.description ?? '',
+      purchasePrice:   eq.purchasePrice,
+      warrantyUntil:   eq.warrantyUntil ?? '',
+      usefulLifeYears: eq.usefulLifeYears,
+      acquisitionDate: eq.acquisitionDate ?? '',
     });
     setImageFile(null);
     setImagePreview(eq.mainImageUrl ?? null);
@@ -320,8 +324,10 @@ export default function EquipmentsPage() {
       buildingId:     form.buildingId,
       specifications: form.specifications?.trim() || undefined,
       description:    form.description?.trim() || undefined,
-      purchasePrice:  form.purchasePrice || undefined,
-      warrantyUntil:  form.warrantyUntil || undefined,
+      purchasePrice:   form.purchasePrice || undefined,
+      warrantyUntil:   form.warrantyUntil || undefined,
+      usefulLifeYears: form.usefulLifeYears || undefined,
+      acquisitionDate: form.acquisitionDate || undefined,
     };
 
     try {
@@ -576,6 +582,38 @@ export default function EquipmentsPage() {
                       className={inputCls}
                       style={borderStyle}
                     />
+                  </div>
+                </div>
+
+                {/* Khấu hao tài sản */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Ngày đưa vào sử dụng
+                    </label>
+                    <input
+                      type="date"
+                      value={form.acquisitionDate ?? ''}
+                      onChange={(e) => setField('acquisitionDate', e.target.value)}
+                      className={inputCls}
+                      style={borderStyle}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Thời gian sử dụng hữu ích (năm)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={form.usefulLifeYears ?? ''}
+                      onChange={(e) => setField('usefulLifeYears', e.target.value ? Number(e.target.value) : undefined)}
+                      placeholder="VD: 5"
+                      className={inputCls}
+                      style={borderStyle}
+                    />
+                    <p className="text-[11px] text-gray-400 mt-0.5">Dùng để tính khấu hao đường thẳng</p>
                   </div>
                 </div>
 

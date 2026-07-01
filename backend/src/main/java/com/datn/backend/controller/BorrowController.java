@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.datn.backend.dto.BorrowResponse;
 import com.datn.backend.dto.CreateBorrowRequest;
+import com.datn.backend.dto.CurrentBorrowerResponse;
 import com.datn.backend.dto.EquipmentScheduleResponse;
 import com.datn.backend.dto.ReportDamageRequest;
 import com.datn.backend.entity.User;
@@ -123,6 +124,16 @@ public class BorrowController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BorrowResponse> getActiveByEquipment(@PathVariable Long equipmentId) {
         return borrowService.getActiveBorrowByEquipment(equipmentId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    // GET /api/v1/borrows/current-borrower/{equipmentId} — mọi user đăng nhập xem ai đang mượn thiết bị
+    // Chỉ trả userName + room + returnDateTime — không kèm email/phone (giữ riêng tư)
+    @GetMapping("/current-borrower/{equipmentId}")
+    public ResponseEntity<CurrentBorrowerResponse> getCurrentBorrower(@PathVariable Long equipmentId) {
+        return borrowService.getActiveBorrowByEquipment(equipmentId)
+                .map(b -> new CurrentBorrowerResponse(b.getUserName(), b.getUserPhone(), b.getBuildingName(), b.getRoom(), b.getReturnDateTime()))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }

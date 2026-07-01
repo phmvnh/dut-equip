@@ -5,11 +5,14 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.datn.backend.entity.Equipment;
 import com.datn.backend.enums.EquipmentStatus;
+
+import jakarta.persistence.LockModeType;
 
 public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
 
@@ -20,6 +23,12 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     boolean existsByBuildingId(Long buildingId);
 
     Optional<Equipment> findByCode(String code);
+
+    // SELECT ... FOR UPDATE — khóa dòng equipment khi tạo đơn mượn để serialize các request
+    // tranh cùng 1 thiết bị → chặn race condition 2+ user cùng đặt 1 khung giờ (TOCTOU)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT e FROM Equipment e WHERE e.id = :id")
+    Optional<Equipment> findByIdForUpdate(@Param("id") Long id);
 
     @Query("SELECT e FROM Equipment e " +
            "JOIN FETCH e.equipType " +

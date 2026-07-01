@@ -13,6 +13,8 @@ interface Props {
   conversationId: number;
   // Người ngồi đối diện trong chat — USER: undefined (server tự biết); ADMIN: id giảng viên đang chat
   targetUserId?: number;
+  // Gọi khi tin nhắn đầu tiên tạo ra conversation mới (conversationId thực từ backend)
+  onConversationCreated?: (conversationId: number) => void;
 }
 
 function formatTime(iso: string): string {
@@ -41,7 +43,7 @@ function formatBytes(n?: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ChatThread({ conversationId, targetUserId }: Props) {
+export default function ChatThread({ conversationId, targetUserId, onConversationCreated }: Props) {
   const role = useAuthStore((s) => s.user?.role);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const showToast = useToastStore((s) => s.show);
@@ -135,6 +137,9 @@ export default function ChatThread({ conversationId, targetUserId }: Props) {
       });
       // Echo ngay vào store — STOMP cũng push, nhưng appendMessage dedupes theo id
       if (role) appendMessage(saved, { currentRole: role });
+      if (onConversationCreated && saved.conversationId !== conversationId) {
+        onConversationCreated(saved.conversationId);
+      }
       setText('');
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -157,6 +162,9 @@ export default function ChatThread({ conversationId, targetUserId }: Props) {
         attachmentSize: file.size,
       });
       if (role) appendMessage(saved, { currentRole: role });
+      if (onConversationCreated && saved.conversationId !== conversationId) {
+        onConversationCreated(saved.conversationId);
+      }
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
         ?? 'Tải ảnh thất bại';
@@ -178,6 +186,9 @@ export default function ChatThread({ conversationId, targetUserId }: Props) {
         attachmentSize: info.size,
       });
       if (role) appendMessage(saved, { currentRole: role });
+      if (onConversationCreated && saved.conversationId !== conversationId) {
+        onConversationCreated(saved.conversationId);
+      }
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
         ?? 'Tải file thất bại';

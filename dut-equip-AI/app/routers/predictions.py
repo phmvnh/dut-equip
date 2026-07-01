@@ -30,6 +30,8 @@ def list_predictions(
     limit: int = Query(20, ge=1, le=200),
     db: Session = Depends(get_session),
 ):
+    # Sắp xếp ưu tiên theo mức nguy hiểm (HIGH trước), sau đó theo điểm cao nhất.
+    # Dùng raw SQL CASE vì SQLAlchemy ORM không có built-in để sắp xếp theo enum tùy chỉnh.
     risk_order_sql = """
         CASE risk_level
             WHEN 'HIGH' THEN 0
@@ -42,6 +44,7 @@ def list_predictions(
     stmt = (
         select(AiPrediction, Equipment, EquipType, Building)
         .join(Equipment, Equipment.id == AiPrediction.equipment_id)
+        # isouter=True (LEFT JOIN): thiết bị không có loại/tòa nhà vẫn trả về, không bị lọc mất.
         .join(EquipType, EquipType.id == Equipment.equip_type_id, isouter=True)
         .join(Building, Building.id == Equipment.building_id, isouter=True)
     )
@@ -53,6 +56,7 @@ def list_predictions(
 
     items: list[PredictionItem] = []
     for pred, eq, et, bld in rows:
+        # Query N+1 nhưng chấp nhận được: limit tối đa 200 thiết bị, chỉ dùng ở trang admin.
         last_maint_date = db.execute(
             select(MaintenanceLog.end_date)
             .where(MaintenanceLog.equipment_id == eq.id)
@@ -63,6 +67,7 @@ def list_predictions(
         days_ago: Optional[int] = None
         if last_maint_date is not None:
             if isinstance(last_maint_date, datetime):
+                # end_date đôi khi là datetime thay vì date tùy driver → chuẩn hoá.
                 last_maint_date = last_maint_date.date()
             days_ago = (date.today() - last_maint_date).days
 

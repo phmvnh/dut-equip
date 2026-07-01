@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.datn.backend.dto.ApiResponse;
-import com.datn.backend.dto.DisposeRequest;
 import com.datn.backend.dto.EquipRequest;
 import com.datn.backend.dto.EquipResponse;
 import com.datn.backend.service.EquipService;
@@ -136,11 +135,6 @@ public class EquipController {
         return ResponseEntity.ok(equipService.setHidden(id, false));
     }
 
-    // POST /api/v1/equips/{id}/dispose — ADMIN thanh lý thiết bị
-    @PostMapping("/{id}/dispose")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<EquipResponse> dispose(@PathVariable Long id,
-                                                 @RequestBody @Valid DisposeRequest request) {
-        return ResponseEntity.ok(equipService.dispose(id, request));
-    }
+    // Thanh lý thiết bị nay đi qua quy trình đề nghị → phê duyệt → thực hiện
+    // tại /api/v1/disposals (DisposalController). Endpoint dispose 1-bước cũ đã được gỡ bỏ.
 }

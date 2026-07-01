@@ -16,6 +16,9 @@ public interface CloudinaryService {
     /** Upload file đính kèm chat (PDF, DOC, XLS, ZIP...), trả về secure_url. */
     String uploadChatFile(MultipartFile file);
 
+    /** Upload file đơn mượn khoa — ảnh (JPG/PNG/WEBP) hoặc PDF, trả về secure_url. */
+    String uploadDeptLoanFile(MultipartFile file);
+
     /** Xóa ảnh trên Cloudinary theo public_id trích từ URL. Bỏ qua nếu URL rỗng. */
     void deleteImage(String imageUrl);
 }

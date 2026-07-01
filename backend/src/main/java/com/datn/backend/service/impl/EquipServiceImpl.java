@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.datn.backend.dto.DisposeRequest;
 import com.datn.backend.dto.EquipRequest;
 import com.datn.backend.dto.EquipResponse;
 import com.datn.backend.entity.Building;
@@ -69,7 +68,7 @@ public class EquipServiceImpl implements EquipService {
         this.cloudinaryService = cloudinaryService;
     }
 
-    // Đơn được tính là "lượt sử dụng": đã được duyệt và đang/đã dùng thực sự
+    // Chỉ tính các đơn đã duyệt hoặc đã phát sinh sử dụng thực tế
     private static final List<BorrowStatus> USAGE_STATUSES = Arrays.asList(
             BorrowStatus.APPROVED, BorrowStatus.OVERDUE, BorrowStatus.RETURNED);
 
@@ -133,6 +132,8 @@ public class EquipServiceImpl implements EquipService {
         equipment.setDescription(request.getDescription());
         equipment.setPurchasePrice(request.getPurchasePrice());
         equipment.setWarrantyUntil(request.getWarrantyUntil());
+        equipment.setUsefulLifeYears(request.getUsefulLifeYears());
+        equipment.setAcquisitionDate(request.getAcquisitionDate());
         equipment.setMainImageUrl(null);
 
         Equipment saved = equipmentRepo.save(equipment);
@@ -161,6 +162,8 @@ public class EquipServiceImpl implements EquipService {
         equipment.setDescription(request.getDescription());
         equipment.setPurchasePrice(request.getPurchasePrice());
         equipment.setWarrantyUntil(request.getWarrantyUntil());
+        equipment.setUsefulLifeYears(request.getUsefulLifeYears());
+        equipment.setAcquisitionDate(request.getAcquisitionDate());
 
         log.info("Admin cập nhật thiết bị: {}", equipment.getCode());
         return EquipResponse.from(equipment);
@@ -171,8 +174,7 @@ public class EquipServiceImpl implements EquipService {
         Equipment equipment = equipmentRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thiết bị"));
 
-        // Chỉ cho phép xóa thiết bị chưa từng được sử dụng — Admin xóa khi nhập sai thông tin lúc thêm.
-        // Bất kỳ borrow request nào (kể cả CANCELLED/REJECTED), lịch sử bảo trì hay bồi thường đều chặn xóa.
+        // Chỉ xóa thiết bị chưa có lịch sử sử dụng để tránh mất dữ liệu nghiệp vụ.
         if (borrowRepo.existsByEquipmentId(id)
                 || maintenanceRepo.existsByEquipmentId(id)
                 || compensationRepo.existsByEquipmentId(id)) {
@@ -198,6 +200,7 @@ public class EquipServiceImpl implements EquipService {
         Equipment equipment = equipmentRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thiết bị"));
 
+        // Ảnh chính cũ được xóa trước khi thay ảnh mới.
         if (equipment.getMainImageUrl() != null) {
             cloudinaryService.deleteImage(equipment.getMainImageUrl());
         }
@@ -273,34 +276,6 @@ public class EquipServiceImpl implements EquipService {
 
         equipment.setHidden(hidden);
         log.info("Admin {} thiết bị: {}", hidden ? "ẩn" : "hiển thị lại", equipment.getCode());
-        return EquipResponse.from(equipment);
-    }
-
-    @Override
-    public EquipResponse dispose(Long id, DisposeRequest request) {
-        Equipment equipment = equipmentRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thiết bị"));
-
-        if (equipment.getStatus() == EquipmentStatus.DISPOSED) {
-            throw new BadRequestException("Thiết bị đã được thanh lý trước đó");
-        }
-        if (equipment.getStatus() == EquipmentStatus.BORROWED) {
-            throw new BadRequestException("Không thể thanh lý thiết bị đang được mượn");
-        }
-        boolean hasActiveBorrow = borrowRepo.existsByEquipmentIdAndStatusIn(
-                id, Arrays.asList(BorrowStatus.PENDING, BorrowStatus.APPROVED));
-        if (hasActiveBorrow) {
-            throw new BadRequestException("Không thể thanh lý thiết bị còn đơn mượn đang xử lý");
-        }
-
-        equipment.setStatus(EquipmentStatus.DISPOSED);
-        equipment.setDisposalReason(request.getReason().trim());
-        equipment.setDisposalDate(request.getDisposalDate());
-        equipment.setDisposalValue(request.getValue());
-        // Khi thanh lý → tự động bỏ cờ hidden để Admin thấy ngay trong tab DISPOSED
-        equipment.setHidden(false);
-
-        log.info("Admin thanh lý thiết bị: {} — lý do: {}", equipment.getCode(), request.getReason());
         return EquipResponse.from(equipment);
     }
 

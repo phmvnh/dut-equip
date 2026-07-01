@@ -26,6 +26,8 @@ public class EquipRequest {
     private String description;
     private BigDecimal purchasePrice;
     private LocalDate warrantyUntil;
+    private Integer usefulLifeYears;
+    private LocalDate acquisitionDate;
 
     public String getCode() { return code; }
     public void setCode(String code) { this.code = code; }
@@ -50,4 +52,10 @@ public class EquipRequest {
 
     public LocalDate getWarrantyUntil() { return warrantyUntil; }
     public void setWarrantyUntil(LocalDate warrantyUntil) { this.warrantyUntil = warrantyUntil; }
+
+    public Integer getUsefulLifeYears() { return usefulLifeYears; }
+    public void setUsefulLifeYears(Integer usefulLifeYears) { this.usefulLifeYears = usefulLifeYears; }
+
+    public LocalDate getAcquisitionDate() { return acquisitionDate; }
+    public void setAcquisitionDate(LocalDate acquisitionDate) { this.acquisitionDate = acquisitionDate; }
 }

@@ -12,4 +12,7 @@ public interface AiPredictionService {
 
     // Gọi sang Python AI service trigger phân tích nền. Trả về status/message.
     Map<String, String> triggerRun();
+
+    // Đọc trạng thái lượt phân tích AI gần nhất (để Dashboard polling).
+    Map<String, Object> latestJob();
 }

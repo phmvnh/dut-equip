@@ -34,6 +34,7 @@ def _prepare_hourly(hourly: dict) -> tuple[list, list]:
         for i, t in enumerate(times) if t is not None
     ]
     clean.sort(key=lambda x: x[0])
+    # ts là danh sách thời gian riêng để bisect tìm nhanh O(log n) thay vì duyệt tuyến tính.
     ts = [c[0] for c in clean]
     return ts, clean
 
@@ -49,6 +50,8 @@ def _exposure_for_intervals(prepared: tuple[list, list], intervals: list[tuple],
     precs: list[float] = []
     high_hours = 0
     for start, end in intervals:
+        # bisect_left/bisect_right: tìm chỉ số đầu/cuối của các mốc giờ nằm trong [start, end].
+        # Tránh duyệt toàn bộ 90 ngày × 24 giờ cho mỗi lượt mượn.
         lo = bisect.bisect_left(ts, start)
         hi = bisect.bisect_right(ts, end)
         for i in range(lo, hi):
@@ -126,6 +129,8 @@ def collect_features_for_type(
         ).scalar()
 
         # Mốc cửa sổ thống kê: lần bảo trì gần nhất, hoặc ngày nhập nếu chưa bảo trì.
+        # Lý do dùng từ bảo trì: đếm số lượt dùng/hỏng SAU khi thiết bị đã được kiểm tra,
+        # phản ánh tình trạng "hiện tại" thật hơn so với toàn bộ vòng đời.
         if last_maint is not None:
             window_start = datetime.combine(last_maint, datetime.min.time())
             window_basis = "last_maintenance"
@@ -133,6 +138,7 @@ def collect_features_for_type(
             window_start = eq.created_at
             window_basis = "since_added"
         else:
+            # Không có ngày nhập: fallback về cửa sổ cố định, ít xảy ra.
             window_start = now - timedelta(days=history_days)
             window_basis = "fallback_90d"
         window_days = max(0, (now - window_start).days)
@@ -178,6 +184,8 @@ def collect_features_for_type(
         exposure = _exposure_for_intervals(prepared, intervals, settings.AI_HUMIDITY_HIGH)
 
         warranty_days = _days_since(eq.warranty_until)
+        # _days_since trả số ngày từ quá khứ đến nay (dương = đã qua).
+        # Đảo dấu: âm = đã hết hạn, dương = còn bao nhiêu ngày.
         warranty_remaining = -warranty_days if warranty_days is not None else None
 
         building_name = eq.building.name if eq.building else "—"

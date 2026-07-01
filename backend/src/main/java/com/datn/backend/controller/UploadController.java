@@ -45,6 +45,14 @@ public class UploadController {
         return ResponseEntity.ok(Map.of("url", url));
     }
 
+    // POST /api/v1/uploads/decision-file — ADMIN upload ảnh scan quyết định/tờ trình đã ký
+    // (dùng cho phê duyệt mua sắm & thanh lý)
+    @PostMapping(value = "/decision-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadDecisionFile(@RequestParam("file") MultipartFile file) {
+        String url = cloudinaryService.uploadImage(file);
+        return ResponseEntity.ok(Map.of("url", url));
+    }
+
     // POST /api/v1/uploads/chat-image — ảnh đính kèm trong chat
     @PostMapping(value = "/chat-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadChatImage(@RequestParam("file") MultipartFile file) {
@@ -56,6 +64,17 @@ public class UploadController {
     @PostMapping(value = "/chat-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadChatFile(@RequestParam("file") MultipartFile file) {
         String url = cloudinaryService.uploadChatFile(file);
+        return ResponseEntity.ok(Map.of(
+                "url", url,
+                "name", file.getOriginalFilename() == null ? "" : file.getOriginalFilename(),
+                "size", file.getSize()
+        ));
+    }
+
+    // POST /api/v1/uploads/dept-loan-file — ADMIN upload đơn mượn từ khoa (ảnh hoặc PDF)
+    @PostMapping(value = "/dept-loan-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> uploadDeptLoanFile(@RequestParam("file") MultipartFile file) {
+        String url = cloudinaryService.uploadDeptLoanFile(file);
         return ResponseEntity.ok(Map.of(
                 "url", url,
                 "name", file.getOriginalFilename() == null ? "" : file.getOriginalFilename(),

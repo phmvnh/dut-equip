@@ -47,12 +47,14 @@ export default function EquipmentDetailModal({ equipment, onClose, onBorrow, onE
   });
   const extraImages = detail?.images ?? equipment.images ?? [];
 
-  // Admin xem thiết bị đang BORROWED → fetch đơn active để biết phòng/người mượn
+  // Thiết bị đang BORROWED → fetch người đang mượn để hiển thị cho mọi user
   const isBorrowed = equipment.status === 'BORROWED';
   const { data: activeBorrow } = useQuery({
     queryKey: ['equip-active-borrow', equipment.id],
-    queryFn: () => borrowApi.getActiveByEquipment(equipment.id),
-    enabled: isAdmin && isBorrowed,
+    queryFn: () => isAdmin
+      ? borrowApi.getActiveByEquipment(equipment.id)
+      : borrowApi.getCurrentBorrower(equipment.id),
+    enabled: isBorrowed,
   });
 
   // Gộp ảnh chính + ảnh phụ thành 1 gallery, ảnh chính luôn đầu tiên
@@ -104,6 +106,14 @@ export default function EquipmentDetailModal({ equipment, onClose, onBorrow, onE
 
   const formattedPrice = equipment.purchasePrice
     ? Number(equipment.purchasePrice).toLocaleString('vi-VN') + ' ₫'
+    : null;
+
+  const formattedBookValue = equipment.currentBookValue != null
+    ? Number(equipment.currentBookValue).toLocaleString('vi-VN') + ' ₫'
+    : null;
+
+  const formattedAnnualDepr = equipment.annualDepreciation != null
+    ? Number(equipment.annualDepreciation).toLocaleString('vi-VN') + ' ₫/năm'
     : null;
 
   return (
@@ -201,19 +211,15 @@ export default function EquipmentDetailModal({ equipment, onClose, onBorrow, onE
             </div>
 
             <div className="flex-1 min-w-0">
-              {isAdmin && isBorrowed && activeBorrow && (
+              {isBorrowed && activeBorrow && (
                 <Section title="Đang được mượn">
                   <InfoRow
-                    label="Phòng"
-                    value={
-                      activeBorrow.room 
-                        ? <>
-                            {activeBorrow.room && <span>{activeBorrow.room}</span>}
-                          </>
-                        : <span className="text-gray-400">—</span>
-                    }
+                    label="Người mượn"
+                    value={<span className="font-semibold text-gray-800">{activeBorrow.userName}</span>}
                   />
-                  <InfoRow label="Người mượn" value={activeBorrow.userName} />
+                  {'userPhone' in activeBorrow && activeBorrow.userPhone && (
+                    <InfoRow label="Điện thoại" value={activeBorrow.userPhone} />
+                  )}
                   <InfoRow
                     label="Hạn trả"
                     value={new Date(activeBorrow.returnDateTime).toLocaleString('vi-VN', {
@@ -221,6 +227,9 @@ export default function EquipmentDetailModal({ equipment, onClose, onBorrow, onE
                       hour: '2-digit', minute: '2-digit',
                     })}
                   />
+                  {activeBorrow.room && (
+                    <InfoRow label="Đang dùng tại" value={activeBorrow.room} />
+                  )}
                 </Section>
               )}
 
@@ -254,9 +263,31 @@ export default function EquipmentDetailModal({ equipment, onClose, onBorrow, onE
             </Section>
           )}
 
-          {(formattedPrice || equipment.warrantyUntil) && (
-            <Section title="Thông tin mua sắm">
-              {formattedPrice && <InfoRow label="Giá trị" value={formattedPrice} />}
+          {(formattedPrice || equipment.warrantyUntil || equipment.acquisitionDate) && (
+            <Section title="Thông tin mua sắm & Khấu hao">
+              {formattedPrice && <InfoRow label="Nguyên giá" value={formattedPrice} />}
+              {equipment.acquisitionDate && (
+                <InfoRow
+                  label="Ngày đưa vào dùng"
+                  value={new Date(equipment.acquisitionDate).toLocaleDateString('vi-VN')}
+                />
+              )}
+              {equipment.usefulLifeYears && (
+                <InfoRow label="Thời gian sử dụng" value={`${equipment.usefulLifeYears} năm`} />
+              )}
+              {formattedAnnualDepr && (
+                <InfoRow label="Khấu hao/năm" value={formattedAnnualDepr} />
+              )}
+              {formattedBookValue != null && (
+                <InfoRow
+                  label="Giá trị còn lại"
+                  value={
+                    <span className={Number(equipment.currentBookValue) === 0 ? 'text-red-500' : 'text-green-700 font-semibold'}>
+                      {formattedBookValue}
+                    </span>
+                  }
+                />
+              )}
               {equipment.warrantyUntil && (
                 <InfoRow
                   label="Bảo hành đến"
@@ -296,17 +327,9 @@ export default function EquipmentDetailModal({ equipment, onClose, onBorrow, onE
         </div>
 
         {/* Footer — bỏ nút "Đóng" vì đã có X góc phải */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+        <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap justify-end gap-3 whitespace-nowrap">
           {isAdminMode ? (
             <>
-              {onDelete && (
-                <button
-                  onClick={() => onDelete(equipment)}
-                  className="h-9 px-5 rounded-lg text-sm font-semibold bg-red-100 text-red-700 border border-red-300 hover:bg-red-200 transition-all"
-                >
-                  Xóa
-                </button>
-              )}
               {onToggleHidden && !isDisposed && (
                 <button
                   onClick={() => canToggleHidden && onToggleHidden(equipment)}
@@ -332,7 +355,7 @@ export default function EquipmentDetailModal({ equipment, onClose, onBorrow, onE
                       : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                   }`}
                 >
-                  Thanh lý
+                  Đề nghị thanh lý
                 </button>
               )}
               {onCreateMaintenance && !isDisposed && (

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Equipment } from '../../types/equipment';
 import { equipApi } from '../../api/equipApi';
+import { borrowApi } from '../../api/borrowApi';
 import { statusConfig, statusDotColor } from '../../utils/statusConfig';
 import EquipmentScheduleList from '../EquipmentScheduleList';
 
@@ -22,6 +23,12 @@ export function useEquipDetailContent(equipment: Equipment, onBorrow: (e: Equipm
   const { data: detail } = useQuery({
     queryKey: ['equip-detail', equipment.id],
     queryFn: () => equipApi.getById(equipment.id),
+  });
+
+  const { data: currentBorrower } = useQuery({
+    queryKey: ['equip-current-borrower', equipment.id],
+    queryFn: () => borrowApi.getCurrentBorrower(equipment.id),
+    enabled: equipment.status === 'BORROWED',
   });
 
   const extraImages = detail?.images ?? equipment.images ?? [];
@@ -91,6 +98,29 @@ export function useEquipDetailContent(equipment: Equipment, onBorrow: (e: Equipm
         <div className="mb-2">
           <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Thông số kỹ thuật</h4>
           <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{equipment.specifications}</p>
+        </div>
+      )}
+
+      {currentBorrower && (
+        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-3.5 py-3 mb-4">
+          <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <div className="text-xs text-amber-800 leading-relaxed">
+            <span className="font-semibold">{currentBorrower.userName}</span>
+            {' '}đang mượn thiết bị này
+            {currentBorrower.userPhone && <span> · <span className="font-semibold">{currentBorrower.userPhone}</span></span>}
+            {currentBorrower.room && <span> · tại {currentBorrower.room}</span>}
+            <span className="block">
+              Hạn trả:{' '}
+              <span className="font-semibold">
+                {new Date(currentBorrower.returnDateTime).toLocaleString('vi-VN', {
+                  day: '2-digit', month: '2-digit', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit',
+                })}
+              </span>
+            </span>
+          </div>
         </div>
       )}
 

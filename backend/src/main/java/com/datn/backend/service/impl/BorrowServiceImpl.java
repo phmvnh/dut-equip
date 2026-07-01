@@ -21,6 +21,7 @@ import com.datn.backend.entity.Equipment;
 import com.datn.backend.entity.User;
 import com.datn.backend.enums.BorrowStatus;
 import com.datn.backend.enums.DamageSeverity;
+import com.datn.backend.enums.DisposalStatus;
 import com.datn.backend.enums.EquipmentStatus;
 import com.datn.backend.enums.NotificationType;
 import com.datn.backend.enums.PurposeType;
@@ -28,6 +29,7 @@ import com.datn.backend.exception.BadRequestException;
 import com.datn.backend.exception.ResourceNotFoundException;
 import com.datn.backend.repository.BorrowRequestRepository;
 import com.datn.backend.repository.BuildingRepository;
+import com.datn.backend.repository.DisposalRequestRepository;
 import com.datn.backend.repository.EquipmentRepository;
 import com.datn.backend.repository.UserRepository;
 import com.datn.backend.service.BorrowService;
@@ -41,6 +43,8 @@ public class BorrowServiceImpl implements BorrowService {
     private static final Logger log = LoggerFactory.getLogger(BorrowServiceImpl.class);
 
     private static final int MAX_BORROW_DAYS = 7;
+    // ID tòa "Phòng thiết bị" — thiết bị luôn trở về đây sau khi trả
+    private static final long EQUIPMENT_ROOM_BUILDING_ID = 36L;
     // Khung giờ làm việc tính theo phút trong ngày
     // Mượn: 07:00–16:30 (đảm bảo còn ít nhất 30p sử dụng trước khi đóng cửa)
     // Trả:  07:00–17:00
@@ -52,6 +56,7 @@ public class BorrowServiceImpl implements BorrowService {
     private final EquipmentRepository equipmentRepo;
     private final BuildingRepository buildingRepo;
     private final UserRepository userRepo;
+    private final DisposalRequestRepository disposalRepo;
     private final NotificationService notificationService;
     private final SettingService settingService;
 
@@ -59,12 +64,14 @@ public class BorrowServiceImpl implements BorrowService {
                              EquipmentRepository equipmentRepo,
                              BuildingRepository buildingRepo,
                              UserRepository userRepo,
+                             DisposalRequestRepository disposalRepo,
                              NotificationService notificationService,
                              SettingService settingService) {
         this.borrowRepo          = borrowRepo;
         this.equipmentRepo       = equipmentRepo;
         this.buildingRepo        = buildingRepo;
         this.userRepo            = userRepo;
+        this.disposalRepo        = disposalRepo;
         this.notificationService = notificationService;
         this.settingService      = settingService;
     }
@@ -73,7 +80,9 @@ public class BorrowServiceImpl implements BorrowService {
     public BorrowResponse create(CreateBorrowRequest request, Long userId) {
         // 1. Thiết bị tồn tại và không ở trạng thái vật lý không khả dụng.
         // AVAILABLE/BORROWED đều cho đi tiếp — khả năng mượn theo khung giờ do overlap quyết định (bước 6b).
-        Equipment equipment = equipmentRepo.findById(request.getEquipmentId())
+        // findByIdForUpdate: khóa dòng equipment (PESSIMISTIC_WRITE) ngay lệnh DB đầu tiên để serialize
+        // các request tranh cùng thiết bị → check 6b + save (bước 9) chạy nguyên tử, chặn race condition.
+        Equipment equipment = equipmentRepo.findByIdForUpdate(request.getEquipmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thiết bị"));
         EquipmentStatus equipStatus = equipment.getStatus();
         if (equipStatus == EquipmentStatus.MAINTENANCE
@@ -117,13 +126,27 @@ public class BorrowServiceImpl implements BorrowService {
             throw new BadRequestException("Thiết bị đang quá hạn chưa được trả. Vui lòng chọn thiết bị khác.");
         }
 
-        // 6b. Trùng khung giờ với đơn đang giữ chỗ (PENDING) hoặc đã duyệt (APPROVED) → ai đặt trước giữ chỗ
-        boolean slotTaken = borrowRepo.existsOverlappingByEquipmentAndStatusIn(
-                equipment.getId(),
-                List.of(BorrowStatus.PENDING, BorrowStatus.APPROVED),
-                borrowDT, returnDT);
-        if (slotTaken) {
-            throw new BadRequestException("Khung giờ này đã có người đặt mượn. Vui lòng chọn khung giờ khác.");
+        // 6a-bis. Thiết bị đang có đề nghị thanh lý chờ xử lý (PENDING/APPROVED) → không cho mượn nữa
+        if (disposalRepo.existsByEquipmentIdAndStatusIn(equipment.getId(),
+                List.of(DisposalStatus.PENDING, DisposalStatus.APPROVED))) {
+            throw new BadRequestException("Thiết bị đang trong quy trình thanh lý. Vui lòng chọn thiết bị khác.");
+        }
+
+        // 6b. Trùng với đơn đã DUYỆT → chặn cứng (thiết bị đang vật lý ở tay người khác trong khoảng đó)
+        boolean approvedOverlap = borrowRepo.existsOverlappingByEquipmentAndStatusIn(
+                equipment.getId(), List.of(BorrowStatus.APPROVED), borrowDT, returnDT);
+        if (approvedOverlap) {
+            throw new BadRequestException("Thiết bị đã được duyệt cho người khác trong khung giờ này.");
+        }
+
+        // 6c. Trùng với đơn đang CHỜ DUYỆT → cảnh báo mềm: lần đầu báo để user xác nhận, lần 2 (confirmedOverlap=true) cho qua
+        boolean pendingOverlap = borrowRepo.existsOverlappingByEquipmentAndStatusIn(
+                equipment.getId(), List.of(BorrowStatus.PENDING), borrowDT, returnDT);
+        if (pendingOverlap && !request.isConfirmedOverlap()) {
+            throw new BadRequestException(
+                    "TRÙNG GIỜ: Khung giờ này đã có người khác đặt mượn nhưng chưa được duyệt. " +
+                    "Bạn vẫn có thể gửi đơn — Admin sẽ quyết định ai được mượn. " +
+                    "Bạn có chắc chắn muốn gửi yêu cầu này không?");
         }
 
         // 7. Đếm đơn active (PENDING + APPROVED) < maxConcurrent (đọc động từ Setting do Admin cấu hình)
@@ -314,7 +337,9 @@ public class BorrowServiceImpl implements BorrowService {
         borrow.setStatus(BorrowStatus.RETURNED);
         borrow.setActualReturnDateTime(LocalDateTime.now());
         borrow.getEquipment().setStatus(finalStatus);
-        log.info("Xác nhận trả thiết bị đơn mượn {} — equipment.status = {}", id, finalStatus);
+        borrow.getEquipment().setBuilding(buildingRepo.getReferenceById(EQUIPMENT_ROOM_BUILDING_ID));
+        log.info("Xác nhận trả thiết bị đơn mượn {} — equipment.status = {}, về phòng thiết bị (building_id={})",
+                id, finalStatus, EQUIPMENT_ROOM_BUILDING_ID);
 
         notificationService.create(
                 borrow.getUser().getId(),
